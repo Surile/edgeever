@@ -10,7 +10,29 @@ import { cn, formatDateTime } from "@/lib/utils";
 import { AppConfirmDialog } from "./dialogs/ConfirmDialogs";
 import type { ApiToken, AuthUser } from "@edgeever/shared";
 
-const DEFAULT_TOKEN_SCOPES = ["read:notebooks", "read:memos", "read:tags"];
+const ALL_TOKEN_SCOPES = [
+  "read:notebooks",
+  "write:notebooks",
+  "read:memos",
+  "write:memos",
+  "read:resources",
+  "write:resources",
+  "read:tags",
+  "write:tags",
+];
+
+const TOKEN_SCOPE_LABELS: Record<string, string> = {
+  "read:notebooks": "读取笔记本",
+  "write:notebooks": "创建与修改笔记本",
+  "read:memos": "读取笔记",
+  "write:memos": "创建与修改笔记",
+  "read:resources": "读取附件资源",
+  "write:resources": "上传与修改附件",
+  "read:tags": "读取标签",
+  "write:tags": "创建与修改标签",
+};
+
+const getTokenScopeLabel = (scope: string) => TOKEN_SCOPE_LABELS[scope] ?? scope;
 
 interface SettingsPaneProps {
   user: AuthUser | null;
@@ -33,7 +55,7 @@ export const SettingsPane = ({
 }: SettingsPaneProps) => {
   const queryClient = useQueryClient();
   const [name, setName] = useState("MCP Agent");
-  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(() => new Set(DEFAULT_TOKEN_SCOPES));
+  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(() => new Set(ALL_TOKEN_SCOPES));
   const [createdToken, setCreatedToken] = useState<{ token: string; apiToken: ApiToken } | null>(null);
   const [tokenRevokeConfirmation, setTokenRevokeConfirmation] = useState<ApiToken | null>(null);
 
@@ -42,23 +64,14 @@ export const SettingsPane = ({
     queryFn: () => api.listApiTokens(),
   });
 
-  const availableScopes = tokensQuery.data?.availableScopes ?? [
-    "read:notebooks",
-    "write:notebooks",
-    "read:memos",
-    "write:memos",
-    "read:resources",
-    "write:resources",
-    "read:tags",
-    "write:tags",
-  ];
+  const availableScopes = tokensQuery.data?.availableScopes ?? ALL_TOKEN_SCOPES;
 
   const createMutation = useMutation({
     mutationFn: api.createApiToken,
     onSuccess: async (data) => {
       setCreatedToken(data);
       setName("");
-      setSelectedScopes(new Set(DEFAULT_TOKEN_SCOPES));
+      setSelectedScopes(new Set(availableScopes));
       await queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
     },
   });
@@ -212,7 +225,7 @@ export const SettingsPane = ({
               </div>
 
               <div className="space-y-2">
-                <span className="block text-xs font-semibold text-slate-500">选择 Scope 权限范围：</span>
+                <span className="block text-xs font-semibold text-slate-500">选择 Token 权限范围：</span>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {availableScopes.map((scope) => (
                     <label
@@ -229,7 +242,9 @@ export const SettingsPane = ({
                         onCheckedChange={() => toggleScope(scope)}
                         className="border-emerald-300"
                       />
-                      <span className="min-w-0 truncate font-mono text-[11px] font-semibold">{scope}</span>
+                      <span className="min-w-0 truncate text-xs font-semibold" title={scope}>
+                        {getTokenScopeLabel(scope)}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -255,8 +270,11 @@ export const SettingsPane = ({
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold text-slate-800 leading-tight">{token.name}</span>
-                      <span className="mt-2 block truncate font-mono text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit border border-slate-100">
-                        {token.scopes.join(", ") || "no scopes"}
+                      <span
+                        className="mt-2 block truncate text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit max-w-full border border-slate-100"
+                        title={token.scopes.join(", ")}
+                      >
+                        {token.scopes.map(getTokenScopeLabel).join("、") || "无权限"}
                       </span>
                       <span className="mt-2 block text-[10px] font-medium text-slate-400">
                         {token.lastUsedAt ? `上次调用时间：${formatDateTime(token.lastUsedAt)}` : "从未被调用"}
