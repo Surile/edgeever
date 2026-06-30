@@ -141,10 +141,6 @@ const EvernoteImportGuideCard = () => (
             target="_blank"
             rel="noopener noreferrer"
             aria-label="在新标签页打开印象笔记迁移操作指引"
-            onClick={(event) => {
-              event.preventDefault();
-              window.open(EVERNOTE_MIGRATION_PATH, "_blank", "noopener,noreferrer");
-            }}
           >
             <HelpCircle className="h-3.5 w-3.5" />
             操作指引
