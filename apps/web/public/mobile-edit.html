@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>编辑笔记 - EdgeEver</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: #fff;
+        color: #0f172a;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        display: flex;
+        min-height: 52px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border-bottom: 1px solid #f1f5f9;
+        background: #fff;
+        padding: max(8px, env(safe-area-inset-top)) 12px 8px;
+      }
+
+      main {
+        display: grid;
+        gap: 12px;
+        padding: 16px 16px max(24px, env(safe-area-inset-bottom));
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #0f172a;
+        font: inherit;
+        font-weight: 700;
+        min-height: 36px;
+        padding: 7px 12px;
+      }
+
+      button.primary {
+        background: #020617;
+        color: #fff;
+      }
+
+      button:disabled {
+        background: #e2e8f0;
+        color: #64748b;
+      }
+
+      .status {
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 10px;
+      }
+
+      .status.dirty,
+      .status.saving {
+        background: #ecfdf5;
+        color: #047857;
+      }
+
+      .status.error {
+        background: #fff1f2;
+        color: #be123c;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 0;
+        background: #fff;
+        color: #0f172a;
+        font: inherit;
+        outline: none;
+        padding: 0;
+      }
+
+      input.title {
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.2;
+      }
+
+      input.tags {
+        border-radius: 8px;
+        color: #64748b;
+        font-size: 15px;
+        line-height: 1.5;
+        padding: 6px 0;
+      }
+
+      textarea {
+        min-height: 72dvh;
+        resize: none;
+        font-size: 18px;
+        line-height: 1.65;
+        padding-top: 12px;
+        white-space: pre-wrap;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: #94a3b8;
+      }
+
+      .error-box {
+        display: none;
+        border: 1px solid #fecdd3;
+        border-radius: 8px;
+        background: #fff1f2;
+        color: #9f1239;
+        font-size: 14px;
+        line-height: 1.5;
+        padding: 10px;
+      }
+
+      .error-box.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="back" type="button" aria-label="返回">‹</button>
+      <div style="display: flex; min-width: 0; flex: 1; justify-content: flex-end; gap: 8px">
+        <span class="status" id="status">加载中</span>
+        <button class="primary" id="done" type="button">完成</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="error-box" id="error"></div>
+      <label class="field">
+        <input class="title" id="title" autocomplete="on" autocorrect="on" inputmode="text" placeholder="无标题笔记" />
+      </label>
+      <div class="meta">
+        <input class="tags" id="tags" autocomplete="on" autocorrect="on" inputmode="text" placeholder="添加标签，用逗号分隔" />
+      </div>
+      <textarea id="body" autocomplete="on" autocorrect="on" inputmode="text" enterkeyhint="enter" autofocus placeholder="开始记录..."></textarea>
+    </main>
+
+    <script>
+      const AUTO_SAVE_DELAY_MS = 1200;
+      const DRAFT_STORAGE_PREFIX = "edgeever-mobile-edit-draft:";
+      const params = new URLSearchParams(location.search);
+      const memoId = params.get("memoId");
+      const returnTo = params.get("returnTo") || "/";
+      const titleInput = document.getElementById("title");
+      const tagsInput = document.getElementById("tags");
+      const bodyInput = document.getElementById("body");
+      const statusNode = document.getElementById("status");
+      const errorNode = document.getElementById("error");
+      const doneButton = document.getElementById("done");
+      const backButton = document.getElementById("back");
+      let memo = null;
+      let dirty = false;
+      let saving = false;
+      let saveTimer = 0;
+      let lastSavedSnapshot = "";
+
+      const draftKey = () => `${DRAFT_STORAGE_PREFIX}${memoId}`;
+
+      const setStatus = (label, kind = "") => {
+        statusNode.textContent = label;
+        statusNode.className = `status ${kind}`.trim();
+      };
+
+      const showError = (message) => {
+        errorNode.textContent = message;
+        errorNode.classList.add("show");
+        setStatus("保存失败", "error");
+      };
+
+      const clearError = () => {
+        errorNode.textContent = "";
+        errorNode.classList.remove("show");
+      };
+
+      const docToMarkdown = (doc) => {
+        if (!doc || !Array.isArray(doc.content)) return "";
+        return doc.content
+          .map((node) => inlineText(node && node.content))
+          .filter(Boolean)
+          .join("\\n\\n");
+      };
+
+      const inlineText = (content) => {
+        if (!Array.isArray(content)) return "";
+        return content
+          .map((node) => {
+            if (!node || typeof node !== "object") return "";
+            if (typeof node.text === "string") return node.text;
+            if (node.type === "hardBreak") return "\\n";
+            return inlineText(node.content);
+          })
+          .join("");
+      };
+
+      const parseTags = (value) =>
+        value
+          .split(/[,，]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+      const currentSnapshot = () =>
+        JSON.stringify({
+          title: titleInput.value,
+          tagsText: tagsInput.value,
+          body: bodyInput.value,
+        });
+
+      const persistLocalDraft = () => {
+        if (!memoId) return;
+        localStorage.setItem(
+          draftKey(),
+          JSON.stringify({
+            title: titleInput.value,
+            tagsText: tagsInput.value,
+            body: bodyInput.value,
+            updatedAt: new Date().toISOString(),
+          })
+        );
+      };
+
+      const readLocalDraft = () => {
+        if (!memoId) return null;
+        try {
+          const raw = localStorage.getItem(draftKey());
+          return raw ? JSON.parse(raw) : null;
+        } catch {
+          return null;
+        }
+      };
+
+      const request = async (path, init) => {
+        const response = await fetch(path, {
+          credentials: "include",
+          ...init,
+          headers: {
+            "Content-Type": "application/json",
+            ...(init && init.headers ? init.headers : {}),
+          },
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(body && body.error && body.error.message ? body.error.message : response.statusText);
+        }
+
+        return response.json();
+      };
+
+      const saveNow = async ({ keepalive = false } = {}) => {
+        if (!memo || saving) return false;
+        const snapshot = currentSnapshot();
+        if (!dirty && snapshot === lastSavedSnapshot) return true;
+
+        window.clearTimeout(saveTimer);
+        saving = true;
+        doneButton.disabled = true;
+        backButton.disabled = true;
+        setStatus("保存中", "saving");
+        clearError();
+
+        try {
+          const data = await request(`/api/v1/memos/${encodeURIComponent(memo.id)}`, {
+            method: "PATCH",
+            keepalive,
+            body: JSON.stringify({
+              expectedRevision: memo.revision,
+              title: titleInput.value,
+              contentMarkdown: bodyInput.value,
+              tags: parseTags(tagsInput.value),
+            }),
+          });
+          memo = data.memo;
+          lastSavedSnapshot = currentSnapshot();
+          dirty = false;
+          localStorage.removeItem(draftKey());
+          setStatus("已保存");
+          return true;
+        } catch (error) {
+          persistLocalDraft();
+          showError(error && error.message ? error.message : "保存失败，已保留本地草稿");
+          return false;
+        } finally {
+          saving = false;
+          doneButton.disabled = false;
+          backButton.disabled = false;
+        }
+      };
+
+      const scheduleSave = () => {
+        dirty = true;
+        persistLocalDraft();
+        setStatus("未保存", "dirty");
+        window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => void saveNow(), AUTO_SAVE_DELAY_MS);
+      };
+
+      const leavePage = async () => {
+        await saveNow();
+        location.href = returnTo;
+      };
+
+      const loadMemo = async () => {
+        if (!memoId) {
+          showError("缺少 memoId");
+          return;
+        }
+
+        try {
+          const data = await request(`/api/v1/memos/${encodeURIComponent(memoId)}`);
+          memo = data.memo;
+          titleInput.value = memo.title || "";
+          tagsInput.value = Array.isArray(memo.tags) ? memo.tags.join(", ") : "";
+          bodyInput.value = memo.contentMarkdown || docToMarkdown(memo.contentJson);
+
+          const draft = readLocalDraft();
+          if (draft && Date.parse(draft.updatedAt || "") >= Date.parse(memo.updatedAt || "")) {
+            titleInput.value = draft.title || "";
+            tagsInput.value = draft.tagsText || "";
+            bodyInput.value = draft.body || "";
+            dirty = true;
+            setStatus("本地草稿", "dirty");
+            scheduleSave();
+          } else {
+            lastSavedSnapshot = currentSnapshot();
+            setStatus("已保存");
+          }
+
+          for (const delay of [0, 120, 500]) {
+            window.setTimeout(() => bodyInput.focus(), delay);
+          }
+        } catch (error) {
+          showError(error && error.message ? error.message : "加载失败");
+        }
+      };
+
+      for (const element of [titleInput, tagsInput, bodyInput]) {
+        element.addEventListener("input", scheduleSave);
+      }
+
+      doneButton.addEventListener("click", () => void leavePage());
+      backButton.addEventListener("click", () => void leavePage());
+      window.addEventListener("pagehide", () => {
+        if (dirty) {
+          persistLocalDraft();
+          void saveNow({ keepalive: true });
+        }
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden" && dirty) {
+          persistLocalDraft();
+          void saveNow({ keepalive: true });
+        }
+      });
+
+      void loadMemo();
+    </script>
+  </body>
+</html>
