@@ -1118,6 +1118,10 @@ export const WorkspaceApp = ({
   }, [runQueuedSync]);
 
   useEffect(() => {
+    if (!isStandaloneRuntime) {
+      return;
+    }
+
     const refreshWorkspaceQueries = () => {
       if (document.visibilityState === "hidden" || (typeof navigator !== "undefined" && !navigator.onLine)) {
         return;
@@ -1136,7 +1140,7 @@ export const WorkspaceApp = ({
       window.removeEventListener("pageshow", refreshWorkspaceQueries);
       document.removeEventListener("visibilitychange", refreshWorkspaceQueries);
     };
-  }, [queryClient]);
+  }, [isStandaloneRuntime, queryClient]);
 
   useEffect(() => {
     if (syncSummary.total === 0) {
