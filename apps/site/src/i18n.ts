@@ -124,7 +124,7 @@ export const siteCopy = {
         {
           title: "从印象笔记迁移",
           summary: "通过 EdgeEver MCP、evernote-backup 和 ENEX 导入脚本，把旧笔记库迁移到自托管实例。",
-          href: "/guides/evernote-migration",
+          href: "/blog/evernote-migration-guide",
           cta: "查看迁移指南",
         },
         {
@@ -235,7 +235,7 @@ export const siteCopy = {
         {
           title: "Migrate from Evernote",
           summary: "Use EdgeEver MCP, evernote-backup, and the ENEX import script to migrate an old notes library into your self-hosted instance.",
-          href: "/guides/evernote-migration",
+          href: "/blog/evernote-migration-guide",
           cta: "Read migration guide",
         },
         {

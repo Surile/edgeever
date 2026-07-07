@@ -14,6 +14,14 @@ export default defineConfig({
     host: "127.0.0.1"
   },
   integrations: [mdx(), sitemap(), icon(), react()],
+  redirects: {
+    "/guides/evernote-migration": "/blog/evernote-migration-guide",
+    "/guides/memos-migration": "/blog/memos-migration-guide",
+    "/guides/notion-migration": "/blog/notion-migration-guide",
+    "/en/guides/evernote-migration": "/en/blog/evernote-migration-guide",
+    "/en/guides/memos-migration": "/en/blog/memos-migration-guide",
+    "/en/guides/notion-migration": "/en/blog/notion-migration-guide",
+  },
   vite: {
     plugins: [tailwindcss()],
   },
