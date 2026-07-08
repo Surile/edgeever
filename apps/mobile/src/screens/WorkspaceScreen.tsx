@@ -64,6 +64,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 import type { ApiToken, MemoDetail, MemoRevision, MemoSummary, Notebook, ResourceListItem, TagSummary } from "@edgeever/shared";
 import { clearMobileMemoDraft, readMobileMemoDraft, writeMobileMemoDraft } from "../lib/mobile-drafts";
 import {
@@ -199,6 +200,7 @@ export const WorkspaceScreen = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [editingMemo, setEditingMemo] = useState<MemoDetail | null>(null);
+  const [richEditingMemo, setRichEditingMemo] = useState<MemoDetail | null>(null);
   const [notebookManagerOpen, setNotebookManagerOpen] = useState(false);
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
@@ -317,6 +319,15 @@ export const WorkspaceScreen = () => {
 
   const closeDetail = () => {
     setSelectedMemoId(null);
+  };
+
+  const closeRichEditor = () => {
+    const memoId = richEditingMemo?.id ?? null;
+    setRichEditingMemo(null);
+    if (memoId) {
+      setSelectedMemoId(memoId);
+    }
+    void invalidateWorkspace();
   };
 
   const memoCount = notebooks.reduce((total, notebook) => total + notebook.memoCount, 0);
@@ -752,6 +763,7 @@ export const WorkspaceScreen = () => {
         onClose={closeDetail}
         onDelete={handleDeleteMemo}
         onEdit={setEditingMemo}
+        onRichEdit={setRichEditingMemo}
         onOpenResources={() => setResourcesOpen(true)}
         onOpenRevisions={setRevisionMemo}
         onRestore={(memo) => restoreMemoMutation.mutate(memo)}
@@ -775,6 +787,7 @@ export const WorkspaceScreen = () => {
         }}
         updateMutation={updateMemoMutation}
       />
+      <RichEditorModal baseUrl={session?.baseUrl ?? ""} memo={richEditingMemo} onClose={closeRichEditor} token={session?.token ?? ""} />
 
       <NotebookManagerModal
         notebookSortMode={notebookSortMode}
@@ -1202,7 +1215,7 @@ const SettingsView = ({
       </View>
     </View>
     <SyncQueuePanel isSyncing={isSyncingQueue} message={syncQueueMessage} onOpen={onOpenSyncQueue} onSync={onSyncQueuedChanges} summary={syncQueueSummary} />
-    <PanelRow label="富文本编辑器" value="待接入 WebView TipTap" />
+    <PanelRow label="富文本编辑器" value="已接入 PWA TipTap WebView" />
   </ScrollView>
 );
 
@@ -2757,6 +2770,7 @@ const MemoDetailModal = ({
   onClose,
   onDelete,
   onEdit,
+  onRichEdit,
   onOpenResources,
   onOpenRevisions,
   onRestore,
@@ -2771,6 +2785,7 @@ const MemoDetailModal = ({
   onClose: () => void;
   onDelete: (memo: MemoDetail) => void;
   onEdit: (memo: MemoDetail) => void;
+  onRichEdit: (memo: MemoDetail) => void;
   onOpenResources: () => void;
   onOpenRevisions: (memo: MemoDetail) => void;
   onRestore: (memo: MemoDetail) => void;
@@ -2813,6 +2828,9 @@ const MemoDetailModal = ({
                 <ActionButton label="编辑" onPress={() => onEdit(memo)}>
                   <Pencil color="#0f172a" size={16} />
                 </ActionButton>
+                <ActionButton label="富文本" onPress={() => onRichEdit(memo)}>
+                  <Bold color="#0f172a" size={16} />
+                </ActionButton>
                 <ActionButton label="历史" onPress={() => onOpenRevisions(memo)}>
                   <History color="#0f172a" size={16} />
                 </ActionButton>
@@ -2844,6 +2862,87 @@ const MemoDetailModal = ({
     </SafeAreaView>
   </Modal>
 );
+
+const RichEditorModal = ({
+  baseUrl,
+  memo,
+  onClose,
+  token,
+}: {
+  baseUrl: string;
+  memo: MemoDetail | null;
+  onClose: () => void;
+  token: string;
+}) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const editorUrl = memo && baseUrl ? buildRichEditorUrl(baseUrl, memo.id) : "";
+  const injectedJavaScriptBeforeContentLoaded = buildRichEditorAuthScript(token);
+
+  useEffect(() => {
+    if (memo) {
+      setLoading(true);
+      setError(false);
+    }
+  }, [memo]);
+
+  return (
+    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="fullScreen" visible={Boolean(memo)}>
+      <SafeAreaView style={styles.richEditorSafeArea}>
+        <View style={styles.modalHeader}>
+          <IconButton onPress={onClose}>
+            <X color="#0f172a" size={20} />
+          </IconButton>
+          <Text numberOfLines={1} style={styles.modalTitle}>
+            富文本编辑器
+          </Text>
+          <IconButton onPress={() => editorUrl && Linking.openURL(editorUrl)}>
+            <ExternalLink color="#0f172a" size={18} />
+          </IconButton>
+        </View>
+
+        {editorUrl ? (
+          <View style={styles.richEditorContainer}>
+            {loading ? (
+              <View style={styles.richEditorLoading}>
+                <ActivityIndicator color="#0f172a" />
+                <Text style={styles.mutedText}>正在加载 TipTap 编辑器</Text>
+              </View>
+            ) : null}
+            {error ? (
+              <View style={styles.centerState}>
+                <Text style={styles.errorText}>富文本编辑器加载失败</Text>
+                <Text style={styles.mutedText}>请确认实例已部署最新版 Web/PWA 资源。</Text>
+              </View>
+            ) : (
+              <WebView
+                allowsBackForwardNavigationGestures
+                injectedJavaScriptBeforeContentLoaded={injectedJavaScriptBeforeContentLoaded}
+                onError={() => {
+                  setLoading(false);
+                  setError(true);
+                }}
+                onLoadEnd={() => setLoading(false)}
+                onNavigationStateChange={(state) => {
+                  if (state.url && !state.url.includes("/mobile-edit.html") && !state.url.startsWith("about:")) {
+                    onClose();
+                  }
+                }}
+                originWhitelist={["http://*", "https://*"]}
+                source={{ uri: editorUrl }}
+                style={styles.richEditorWebView}
+              />
+            )}
+          </View>
+        ) : (
+          <View style={styles.centerState}>
+            <Text style={styles.errorText}>缺少实例地址，无法打开富文本编辑器</Text>
+          </View>
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
+};
 
 const EditMemoModal = ({
   imageCompressionEnabled,
@@ -3863,6 +3962,57 @@ const formatRevisionActor = (actor: string) => {
   return actor || "system";
 };
 
+const buildRichEditorUrl = (baseUrl: string, memoId: string) => {
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const params = new URLSearchParams({
+    memoId,
+    returnTo: "/",
+  });
+
+  return `${normalizedBaseUrl}/mobile-edit.html#${params.toString()}`;
+};
+
+const buildRichEditorAuthScript = (token: string) => `
+(() => {
+  const token = ${JSON.stringify(token)};
+  if (!token) {
+    return true;
+  }
+
+  const applyAuthHeader = (headers) => {
+    const nextHeaders = new Headers(headers || {});
+    if (!nextHeaders.has("Authorization")) {
+      nextHeaders.set("Authorization", "Bearer " + token);
+    }
+    return nextHeaders;
+  };
+
+  const shouldAuthorize = (input) => {
+    const url = typeof input === "string" ? input : input && "url" in input ? input.url : "";
+    if (!url) {
+      return true;
+    }
+    return url.startsWith("/api/") || url.includes("/api/");
+  };
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    if (!shouldAuthorize(input)) {
+      return originalFetch(input, init);
+    }
+
+    if (input instanceof Request) {
+      const headers = applyAuthHeader(init.headers || input.headers);
+      return originalFetch(new Request(input, { ...init, headers }));
+    }
+
+    return originalFetch(input, { ...init, headers: applyAuthHeader(init.headers) });
+  };
+
+  true;
+})();
+`;
+
 const getSyncQueueStatusLabel = (status: MobileSyncQueueItem["status"]) => {
   const labels: Record<MobileSyncQueueItem["status"], string> = {
     pending: "待同步",
@@ -4353,6 +4503,30 @@ const styles = StyleSheet.create({
   },
   modalSafeArea: {
     backgroundColor: "#f8fafc",
+    flex: 1,
+  },
+  richEditorSafeArea: {
+    backgroundColor: "#ffffff",
+    flex: 1,
+  },
+  richEditorContainer: {
+    backgroundColor: "#ffffff",
+    flex: 1,
+  },
+  richEditorLoading: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    bottom: 0,
+    gap: 10,
+    justifyContent: "center",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+    zIndex: 2,
+  },
+  richEditorWebView: {
+    backgroundColor: "#ffffff",
     flex: 1,
   },
   modalHeader: {
