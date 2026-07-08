@@ -1943,11 +1943,11 @@ const CreateMemoModal = ({
   };
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
+    <Modal animationType="slide" onRequestClose={() => !createMutation.isPending && onClose()} presentationStyle="pageSheet" visible={visible}>
       <SafeAreaView style={styles.modalSafeArea}>
         <View style={styles.modalHeader}>
-          <IconButton onPress={onClose}>
-            <X color="#0f172a" size={20} />
+          <IconButton disabled={createMutation.isPending} onPress={onClose}>
+            <X color={createMutation.isPending ? "#cbd5e1" : "#0f172a"} size={20} />
           </IconButton>
           <Text style={styles.modalTitle}>新建笔记</Text>
           <IconButton onPress={() => createMutation.mutate()}>
@@ -2051,11 +2051,11 @@ const TemplatesModal = ({
   });
 
   return (
-    <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={visible}>
+    <Modal animationType="slide" onRequestClose={() => !createFromTemplateMutation.isPending && onClose()} presentationStyle="pageSheet" visible={visible}>
       <SafeAreaView style={styles.modalSafeArea}>
         <View style={styles.modalHeader}>
-          <IconButton onPress={onClose}>
-            <X color="#0f172a" size={20} />
+          <IconButton disabled={createFromTemplateMutation.isPending} onPress={onClose}>
+            <X color={createFromTemplateMutation.isPending ? "#cbd5e1" : "#0f172a"} size={20} />
           </IconButton>
           <Text style={styles.modalTitle}>模板</Text>
           <View style={styles.iconButtonPlaceholder} />
