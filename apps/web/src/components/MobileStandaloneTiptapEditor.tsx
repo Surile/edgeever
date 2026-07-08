@@ -36,10 +36,20 @@ type ListNotebooksResponse = {
   notebooks: Notebook[];
 };
 
-export const MobileStandaloneTiptapEditor = () => {
+type MobileStandaloneTiptapEditorProps = {
+  memoId?: string | null;
+  returnTo?: string;
+  onLeave?: () => void;
+};
+
+export const MobileStandaloneTiptapEditor = ({
+  memoId: memoIdProp,
+  returnTo: returnToProp,
+  onLeave,
+}: MobileStandaloneTiptapEditorProps = {}) => {
   const params = useMemo(() => getMobileEditorParams(), []);
-  const memoId = params.get("memoId");
-  const returnTo = safeMobileEditorReturnPath(params.get("returnTo"));
+  const memoId = memoIdProp ?? params.get("memoId");
+  const returnTo = safeMobileEditorReturnPath(returnToProp ?? params.get("returnTo"));
   const draftKey = getMobileEditorDraftKey(memoId);
   const [memo, setMemo] = useState<MemoDetail | null>(null);
   const memoRef = useRef<MemoDetail | null>(null);
@@ -274,8 +284,13 @@ export const MobileStandaloneTiptapEditor = () => {
   }, [persistLocalDraft, saveNow, setSaveStateStable]);
 
   const navigateBack = useCallback(() => {
+    if (onLeave) {
+      onLeave();
+      return;
+    }
+
     window.location.replace(returnTo);
-  }, [returnTo]);
+  }, [onLeave, returnTo]);
 
   const leavePage = useCallback(async () => {
     if (leavingRef.current) {
