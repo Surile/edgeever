@@ -12,6 +12,7 @@ import { PreferenceCard } from "./settings/PreferenceCard";
 import { PasswordCard } from "./settings/PasswordCard";
 import { SessionCard } from "./settings/SessionCard";
 import { SystemInfoCard } from "./settings/SystemInfoCard";
+import { UserManagementCard } from "./settings/UserManagementCard";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface SettingsPaneProps {
@@ -23,6 +24,7 @@ interface SettingsPaneProps {
   onLogout: () => void;
   isLoggingOut: boolean;
   authRequired: boolean;
+  isOwner: boolean;
   onShowGuide?: () => void;
 }
 
@@ -41,6 +43,7 @@ export const SettingsPane = ({
   onLogout,
   isLoggingOut,
   authRequired,
+  isOwner,
   onShowGuide,
 }: SettingsPaneProps) => {
   const { t } = useTranslation();
@@ -84,6 +87,7 @@ export const SettingsPane = ({
             <McpConfigCard />
           </SettingsGroup>
           <SettingsGroup>
+            {isOwner ? <UserManagementCard /> : null}
             <PasswordCard authRequired={authRequired} />
             <SystemInfoCard />
             <SessionCard authRequired={authRequired} isLoggingOut={isLoggingOut} onLogout={onLogout} />
