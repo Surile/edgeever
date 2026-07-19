@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildGitHubFeedbackUrl } from "./github-feedback";
+import { buildGitHubFeedbackUrl } from "../packages/shared/src/github-feedback";
 
 describe("buildGitHubFeedbackUrl", () => {
   test("prefills localized feedback copy and system information", () => {
