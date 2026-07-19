@@ -46,6 +46,9 @@ jobs:
       - name: Typecheck
         run: bun run typecheck:mobile
 
+      - name: Reset Metro cache for this checkout
+        run: bun --cwd apps/mobile expo export --platform android --clear --max-workers 1 --output-dir "$RUNNER_TEMP/edgeever-metro-warmup"
+
       - name: Build fast test APK
         if: github.event_name == 'push'
         run: bun run build:android:fast
