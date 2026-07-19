@@ -17,6 +17,7 @@ import { AppDialogProvider } from "../src/components/AppDialogProvider";
 import { MobileUpdateProvider } from "../src/lib/mobile-update";
 
 void SplashScreen.preventAutoHideAsync();
+SplashScreen.setOptions({ duration: 300, fade: true });
 
 const MOBILE_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const MOBILE_CACHE_STALE_TIME = 5 * 60 * 1000;
