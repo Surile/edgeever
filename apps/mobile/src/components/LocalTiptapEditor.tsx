@@ -469,9 +469,84 @@ const createProtectedImageExtension = (
         }
         placeholder.append(overlay);
 
+        let requestId = 0;
+        let renderedSource = String(node.attrs.src ?? "");
+
+        const applyImageAttributes = (attributes: Record<string, unknown>) => {
+          preview.alt = String(attributes.alt ?? "");
+          const title = String(attributes.title ?? "");
+          if (title && !title.startsWith("data:")) {
+            preview.title = title;
+          } else {
+            preview.removeAttribute("title");
+          }
+        };
+
+        const revealLoadedImage = (
+          displaySource: string,
+          attributes: Record<string, unknown>,
+          activeRequestId: number
+        ) => {
+          const preload = document.createElement("img");
+          preload.onload = () => {
+            if (activeRequestId !== requestId) {
+              return;
+            }
+            applyImageAttributes(attributes);
+            preview.src = displaySource;
+            preview.className = "";
+            overlay.remove();
+            placeholder.className = "edgeever-image-upload-result";
+            placeholder.removeAttribute("role");
+            placeholder.removeAttribute("aria-live");
+          };
+          preload.src = displaySource;
+        };
+
+        const loadCompletedImage = (attributes: Record<string, unknown>) => {
+          requestId += 1;
+          const activeRequestId = requestId;
+          const source = String(attributes.src ?? "");
+          renderedSource = source;
+          const protectedSource = normalizeProtectedResourceSource(source, baseUrl);
+          if (!protectedSource) {
+            revealLoadedImage(resolveUrl(source, baseUrl), attributes, activeRequestId);
+            return;
+          }
+
+          void loadResource(protectedSource)
+            .then((dataUrl) => {
+              if (activeRequestId === requestId) {
+                revealLoadedImage(dataUrl ?? resolveUrl(source, baseUrl), attributes, activeRequestId);
+              }
+            })
+            .catch(() => {
+              if (activeRequestId === requestId) {
+                revealLoadedImage(resolveUrl(source, baseUrl), attributes, activeRequestId);
+              }
+            });
+        };
+
         return {
           dom: placeholder,
-          update: (updatedNode) => isMobileImageUploadPlaceholderSource(updatedNode.attrs.src),
+          update: (updatedNode) => {
+            if (updatedNode.type !== node.type) {
+              return false;
+            }
+            const source = String(updatedNode.attrs.src ?? "");
+            if (isMobileImageUploadPlaceholderSource(source)) {
+              return true;
+            }
+            if (source === renderedSource) {
+              applyImageAttributes(updatedNode.attrs);
+              return true;
+            }
+            loadCompletedImage(updatedNode.attrs);
+            return true;
+          },
+          destroy: () => {
+            requestId += 1;
+          },
         };
       }
 
@@ -632,6 +707,8 @@ const getEditorStyles = (theme: "light" | "dark") => `
   .edgeever-image-upload-placeholder { position: relative; min-height: 112px; margin: 14px 0; overflow: hidden; border-radius: 10px; background: ${theme === "dark" ? "#1e293b" : "#f1f5f9"}; }
   .edgeever-image-upload-preview { display: block; width: 100%; max-height: 360px; margin: 0 !important; object-fit: contain; border-radius: 10px; }
   .edgeever-image-upload-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 10px; background: rgba(15, 23, 42, 0.38); color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 1px 2px rgba(15, 23, 42, 0.45); }
+  .edgeever-image-upload-result { margin: 14px 0; }
+  .edgeever-image-upload-result > img { margin: 0 auto; }
   .edgeever-image-upload-spinner { width: 18px; height: 18px; border: 2px solid ${theme === "dark" ? "#475569" : "#cbd5e1"}; border-top-color: #0f766e; border-radius: 999px; animation: edgeever-image-upload-spin 0.8s linear infinite; }
   @keyframes edgeever-image-upload-spin { to { transform: rotate(360deg); } }
   .edgeever-editor-content hr { margin: 24px 0; border: 0; border-top: 1px solid #cbd5e1; }
