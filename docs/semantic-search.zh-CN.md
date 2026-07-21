@@ -47,7 +47,13 @@ EdgeEver 可以为 MCP 服务可选地添加笔记语义搜索。笔记正文仍
 
    [vars]
    EDGE_EVER_SEMANTIC_SEARCH_ENABLED = "true"
+
+   [triggers]
+   crons = ["*/5 * * * *"]
    ```
+
+   cron 触发器是可选但建议保留：它会重试失败的后台索引并处理导入的数据。
+   它被有意排除在 EdgeEver 的默认配置之外。
 
 4. 按正常方式部署。随后通过 MCP 调用 `reindex_memos`，传入 `limit: 25`；
    持续将返回的 `nextCursor` 传入下一次调用，直到它为 `null`。

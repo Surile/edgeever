@@ -51,7 +51,14 @@ they are returned, so trashed, deleted, or out-of-date memos are never returned.
 
    [vars]
    EDGE_EVER_SEMANTIC_SEARCH_ENABLED = "true"
+
+   [triggers]
+   crons = ["*/5 * * * *"]
    ```
+
+   The cron trigger is optional but recommended: it retries failed background
+   indexing and indexes imported data. It is deliberately not part of EdgeEver's
+   default configuration.
 
 4. Deploy normally. Then call `reindex_memos` through MCP with `limit: 25`, and
    keep passing its `nextCursor` until the returned value is `null`.

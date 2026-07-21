@@ -22,6 +22,3 @@ preview_bucket_name = "edgeever-resources"
 
 [observability]
 enabled = true
-
-[triggers]
-crons = ["*/5 * * * *"]
