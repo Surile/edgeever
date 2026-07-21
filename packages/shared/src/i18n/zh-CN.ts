@@ -644,6 +644,13 @@ export const zhCN = {
     deleteConfirmTitle: "确定要删除 Token「{{name}}」吗？",
     deleteConfirmDescription: "删除操作不可逆。一旦删除，使用此 Token 进行 API 或 MCP 调用的一切客户端将立即失效并被拒绝访问。",
     deleteConfirmLabel: "确认删除",
+    semanticIndexTitle: "历史笔记语义索引",
+    semanticIndexDescription: "将现有笔记写入 Vectorize。首次启用后执行一次即可。",
+    semanticIndexUnavailable: "请先在 Cloudflare 配置 Workers AI、Vectorize 绑定并启用语义搜索。",
+    semanticIndexAction: "建立索引",
+    semanticIndexing: "正在建立索引…",
+    semanticIndexComplete: "已索引 {{memos}} 篇笔记，共 {{chunks}} 个文本片段。",
+    semanticIndexFailed: "建立索引失败，请检查 Cloudflare 绑定和部署状态后重试。",
     scopes: {
       "read:notebooks": "读取笔记本",
       "write:notebooks": "创建与修改笔记本",

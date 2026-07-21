@@ -644,6 +644,13 @@ export const enUS = {
     deleteConfirmTitle: "Delete token “{{name}}”?",
     deleteConfirmDescription: "This cannot be undone. Once deleted, all clients using this token for API or MCP calls will immediately lose access.",
     deleteConfirmLabel: "Delete token",
+    semanticIndexTitle: "Historical memo semantic index",
+    semanticIndexDescription: "Write existing memos to Vectorize. Run this once after first enabling semantic search.",
+    semanticIndexUnavailable: "Configure the Workers AI and Vectorize bindings in Cloudflare, then enable semantic search first.",
+    semanticIndexAction: "Build index",
+    semanticIndexing: "Building index…",
+    semanticIndexComplete: "Indexed {{memos}} memos across {{chunks}} text chunks.",
+    semanticIndexFailed: "Indexing failed. Check your Cloudflare bindings and deployment, then try again.",
     scopes: {
       "read:notebooks": "Read notebooks",
       "write:notebooks": "Create and edit notebooks",

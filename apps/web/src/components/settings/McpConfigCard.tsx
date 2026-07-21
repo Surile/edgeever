@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Copy, KeyRound, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { ChevronDown, Copy, Database, KeyRound, LoaderCircle, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import type { ApiToken } from "@edgeever/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -332,10 +332,17 @@ export const McpConfigCard = () => {
   const [scopeDefaultsSynced, setScopeDefaultsSynced] = useState(false);
   const [createdToken, setCreatedToken] = useState<{ token: string; apiToken: ApiToken } | null>(null);
   const [tokenDeleteConfirmation, setTokenDeleteConfirmation] = useState<ApiToken | null>(null);
+  const [semanticIndexState, setSemanticIndexState] = useState<"idle" | "running" | "complete" | "error">("idle");
+  const [semanticIndexResult, setSemanticIndexResult] = useState<{ memos: number; chunks: number } | null>(null);
 
   const tokensQuery = useQuery({
     queryKey: ["api-tokens"],
     queryFn: () => api.listApiTokens(),
+  });
+
+  const semanticSearchQuery = useQuery({
+    queryKey: ["semantic-search-status"],
+    queryFn: () => api.getSemanticSearchStatus(),
   });
 
   const availableScopes = tokensQuery.data?.availableScopes ?? ALL_TOKEN_SCOPES;
@@ -398,6 +405,28 @@ export const McpConfigCard = () => {
     createMutation.mutate({ name: name.trim(), scopes });
   };
 
+  const handleSemanticReindex = async () => {
+    setSemanticIndexState("running");
+    setSemanticIndexResult(null);
+    let cursor: string | undefined;
+    let indexedMemos = 0;
+    let indexedChunks = 0;
+
+    try {
+      do {
+        const result = await api.reindexSemanticMemos({ cursor, limit: 10 });
+        indexedMemos += result.indexedMemos;
+        indexedChunks += result.indexedChunks;
+        cursor = result.nextCursor ?? undefined;
+      } while (cursor);
+
+      setSemanticIndexResult({ memos: indexedMemos, chunks: indexedChunks });
+      setSemanticIndexState("complete");
+    } catch {
+      setSemanticIndexState("error");
+    }
+  };
+
   return (
     <>
       <Card className="w-full min-w-0 overflow-hidden shadow-none">
@@ -437,6 +466,39 @@ export const McpConfigCard = () => {
               onToggleScope={toggleScope}
             />
           </form>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <Database className="h-4 w-4 text-emerald-700" />
+                  {t("mcp.semanticIndexTitle")}
+                </div>
+                <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                  {semanticSearchQuery.data?.enabled ? t("mcp.semanticIndexDescription") : t("mcp.semanticIndexUnavailable")}
+                </p>
+                {semanticIndexState === "complete" && semanticIndexResult && (
+                  <p className="mt-1 text-[11px] font-medium text-emerald-700">
+                    {t("mcp.semanticIndexComplete", semanticIndexResult)}
+                  </p>
+                )}
+                {semanticIndexState === "error" && (
+                  <p className="mt-1 text-[11px] font-medium text-rose-600">{t("mcp.semanticIndexFailed")}</p>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 bg-white"
+                type="button"
+                disabled={!semanticSearchQuery.data?.enabled || semanticIndexState === "running"}
+                onClick={() => void handleSemanticReindex()}
+              >
+                {semanticIndexState === "running" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                {semanticIndexState === "running" ? t("mcp.semanticIndexing") : t("mcp.semanticIndexAction")}
+              </Button>
+            </div>
+          </div>
 
           <div className="space-y-3">
             <span className="block text-xs font-semibold text-slate-500">{t("mcp.activeTokens")}</span>

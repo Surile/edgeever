@@ -843,6 +843,46 @@ app.delete("/api/v1/api-tokens/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+app.get("/api/v1/semantic-search/status", async (c) => {
+  const userOnly = requireUser(c);
+
+  if (userOnly) {
+    return userOnly;
+  }
+
+  return c.json({ enabled: Boolean(getSemanticSearchBindings(c.env)) });
+});
+
+app.post("/api/v1/semantic-search/reindex", async (c) => {
+  const userOnly = requireUser(c);
+
+  if (userOnly) {
+    return userOnly;
+  }
+
+  const semanticSearch = getSemanticSearchBindings(c.env);
+
+  if (!semanticSearch) {
+    return apiError(
+      c,
+      "semantic_search_unavailable",
+      "Semantic search is not enabled. Configure the optional Workers AI and Vectorize bindings first.",
+      503
+    );
+  }
+
+  const input: Record<string, unknown> = await c.req.json<Record<string, unknown>>().catch(() => ({}));
+  const result = await reindexMemos(
+    semanticSearch,
+    c.env.DB,
+    getWorkspaceId(c),
+    clampNumber(Number(input.limit ?? 10), 1, 25),
+    getOptionalString(input.cursor) ?? undefined
+  );
+
+  return c.json(result);
+});
+
 app.get("/api/v1/notebooks", async (c) => {
   const denied = requireScopes(c, "read:notebooks");
 

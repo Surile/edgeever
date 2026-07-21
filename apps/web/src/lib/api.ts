@@ -47,6 +47,14 @@ type ListApiTokensResponse = {
   availableScopes: string[];
 };
 
+type SemanticSearchStatusResponse = { enabled: boolean };
+type SemanticReindexResponse = {
+  indexedMemos: number;
+  indexedChunks: number;
+  purgedMemos: number;
+  nextCursor: string | null;
+};
+
 type ListUsersResponse = { users: InstanceUser[] };
 type UserResponse = { user: InstanceUser };
 
@@ -194,6 +202,14 @@ export const api = {
   revokeApiToken: (tokenId: string) =>
     request<{ ok: true }>(`/api/v1/api-tokens/${tokenId}`, {
       method: "DELETE",
+    }),
+
+  getSemanticSearchStatus: () => request<SemanticSearchStatusResponse>("/api/v1/semantic-search/status"),
+
+  reindexSemanticMemos: (payload: { cursor?: string; limit?: number }) =>
+    request<SemanticReindexResponse>("/api/v1/semantic-search/reindex", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
 
   listMemos: (params: {
