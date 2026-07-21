@@ -422,6 +422,7 @@ export const McpConfigCard = () => {
 
       setSemanticIndexResult({ memos: indexedMemos, chunks: indexedChunks });
       setSemanticIndexState("complete");
+      await queryClient.invalidateQueries({ queryKey: ["semantic-search-status"] });
     } catch {
       setSemanticIndexState("error");
     }
@@ -475,7 +476,14 @@ export const McpConfigCard = () => {
                   {t("mcp.semanticIndexTitle")}
                 </div>
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                  {semanticSearchQuery.data?.enabled ? t("mcp.semanticIndexDescription") : t("mcp.semanticIndexUnavailable")}
+                  {!semanticSearchQuery.data?.enabled
+                    ? t("mcp.semanticIndexUnavailable")
+                    : semanticSearchQuery.data.needsIndexing
+                      ? t("mcp.semanticIndexDescription", {
+                          indexed: semanticSearchQuery.data.indexedMemos,
+                          total: semanticSearchQuery.data.totalMemos,
+                        })
+                      : t("mcp.semanticIndexUpToDate")}
                 </p>
                 {semanticIndexState === "complete" && semanticIndexResult && (
                   <p className="mt-1 text-[11px] font-medium text-emerald-700">
@@ -486,17 +494,19 @@ export const McpConfigCard = () => {
                   <p className="mt-1 text-[11px] font-medium text-rose-600">{t("mcp.semanticIndexFailed")}</p>
                 )}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0 bg-white"
-                type="button"
-                disabled={!semanticSearchQuery.data?.enabled || semanticIndexState === "running"}
-                onClick={() => void handleSemanticReindex()}
-              >
-                {semanticIndexState === "running" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
-                {semanticIndexState === "running" ? t("mcp.semanticIndexing") : t("mcp.semanticIndexAction")}
-              </Button>
+              {semanticSearchQuery.data?.needsIndexing && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 bg-white"
+                  type="button"
+                  disabled={semanticIndexState === "running"}
+                  onClick={() => void handleSemanticReindex()}
+                >
+                  {semanticIndexState === "running" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                  {semanticIndexState === "running" ? t("mcp.semanticIndexing") : t("mcp.semanticIndexAction")}
+                </Button>
+              )}
             </div>
           </div>
 

@@ -850,7 +850,32 @@ app.get("/api/v1/semantic-search/status", async (c) => {
     return userOnly;
   }
 
-  return c.json({ enabled: Boolean(getSemanticSearchBindings(c.env)) });
+  const semanticSearch = getSemanticSearchBindings(c.env);
+
+  if (!semanticSearch) {
+    return c.json({ enabled: false, totalMemos: 0, indexedMemos: 0, needsIndexing: false });
+  }
+
+  const status = await c.env.DB
+    .prepare(
+      `SELECT COUNT(*) AS total_memos,
+              COALESCE(SUM(CASE WHEN i.memo_id IS NOT NULL AND i.revision = mc.revision THEN 1 ELSE 0 END), 0) AS indexed_memos
+       FROM memos m
+       INNER JOIN memo_contents mc ON mc.memo_id = m.id
+       LEFT JOIN memo_semantic_index i ON i.memo_id = m.id AND i.workspace_id = m.workspace_id
+       WHERE m.workspace_id = ? AND m.is_deleted = 0`
+    )
+    .bind(getWorkspaceId(c))
+    .first<{ total_memos: number; indexed_memos: number }>();
+  const totalMemos = status?.total_memos ?? 0;
+  const indexedMemos = status?.indexed_memos ?? 0;
+
+  return c.json({
+    enabled: true,
+    totalMemos,
+    indexedMemos,
+    needsIndexing: indexedMemos < totalMemos,
+  });
 });
 
 app.post("/api/v1/semantic-search/reindex", async (c) => {

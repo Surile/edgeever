@@ -47,7 +47,12 @@ type ListApiTokensResponse = {
   availableScopes: string[];
 };
 
-type SemanticSearchStatusResponse = { enabled: boolean };
+type SemanticSearchStatusResponse = {
+  enabled: boolean;
+  totalMemos: number;
+  indexedMemos: number;
+  needsIndexing: boolean;
+};
 type SemanticReindexResponse = {
   indexedMemos: number;
   indexedChunks: number;
