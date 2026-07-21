@@ -22,3 +22,16 @@ preview_bucket_name = "edgeever-resources"
 
 [observability]
 enabled = true
+
+[[vectorize]]
+binding = "MEMO_VECTORS"
+index_name = "edgeever-memo-vectors"
+
+[ai]
+binding = "AI"
+
+[vars]
+EDGE_EVER_SEMANTIC_SEARCH_ENABLED = "true"
+
+[triggers]
+crons = ["*/5 * * * *"]
