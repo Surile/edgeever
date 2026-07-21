@@ -5,6 +5,7 @@ import StarterKit from "@tiptap/starter-kit";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import { TableKit } from "@tiptap/extension-table";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft,
@@ -17,6 +18,8 @@ import {
   Save,
   ReplaceAll,
   MoreHorizontal,
+  Maximize2,
+  Minimize2,
   Paperclip,
   Pencil,
   Sparkles,
@@ -49,6 +52,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EditorToolbar } from "./EditorToolbar";
 import { ThemeToggle } from "./ThemeToggle";
 import { RevisionHistoryDialog } from "./dialogs/RevisionHistoryDialog";
@@ -58,6 +62,7 @@ import { cn, formatDateTime, parseTagsText } from "@/lib/utils";
 import {
   docToMarkdown,
   markdownToDoc,
+  resolveMemoContentDoc,
   type Notebook,
   type MemoDetail,
   type MemoEditSession,
@@ -451,6 +456,8 @@ const MobileNotebookSelectSheet = ({
 
 type EditorPaneProps = {
   memo: MemoDetail | null;
+  desktopFocusMode: boolean;
+  onToggleDesktopFocusMode: () => void;
   mobileDefaultEditMemoId: string | null;
   preserveUnsavedContentFromMemoId?: string | null;
   saveBlocked?: boolean;
@@ -738,7 +745,9 @@ const MobileNativeEditorPane = ({
       const useDraft = Boolean(draft && (queuedUpdate || draftUpdatedAt >= remoteUpdatedAt));
       const nextTitle = useDraft && draft ? draft.title : memo.title ?? "";
       const nextTagsText = useDraft && draft ? draft.tagsText : memo.tags.join(", ");
-      const nextContent = useDraft && draft ? draft.contentJson : memo.contentJson;
+      const nextContent = useDraft && draft
+        ? draft.contentJson
+        : resolveMemoContentDoc(memo.contentJson, memo.contentMarkdown);
       editSessionRef.current = editSessionResponse?.editSession ?? null;
 
       hydratingRef.current = true;
@@ -940,7 +949,7 @@ const MobileNativeEditorPane = ({
 
         <textarea
           ref={bodyRef}
-          defaultValue={docToMarkdown(memo.contentJson)}
+          defaultValue={docToMarkdown(resolveMemoContentDoc(memo.contentJson, memo.contentMarkdown))}
           autoCapitalize="sentences"
           autoComplete="on"
           autoCorrect="on"
@@ -1064,6 +1073,8 @@ export const EditorPane = (props: EditorPaneProps) => {
 
 const RichEditorPane = ({
   memo,
+  desktopFocusMode,
+  onToggleDesktopFocusMode,
   mobileDefaultEditMemoId,
   preserveUnsavedContentFromMemoId: _preserveUnsavedContentFromMemoId,
   saveBlocked: _saveBlocked = false,
@@ -1086,6 +1097,7 @@ const RichEditorPane = ({
   selectionActionBar,
   onRequestMobileNativeEdit,
 }: RichEditorPaneProps) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isSelectionMode = Boolean(selectionActionBar);
   const [title, setTitle] = useState("");
@@ -1320,11 +1332,16 @@ const RichEditorPane = ({
         allowBase64: false,
         inline: false,
       }),
+      TableKit.configure({
+        table: { renderWrapper: true },
+      }),
       Placeholder.configure({
         placeholder: "开始记录...",
       }),
     ],
-    content: memo?.contentJson ?? { type: "doc", content: [{ type: "paragraph" }] },
+    content: memo
+      ? resolveMemoContentDoc(memo.contentJson, memo.contentMarkdown)
+      : { type: "doc", content: [{ type: "paragraph" }] },
     editable: Boolean(memo && !effectiveReadOnly),
     editorProps: {
       attributes: {
@@ -1675,7 +1692,9 @@ const RichEditorPane = ({
       const useDraft = Boolean(draft && (queuedUpdate || draftUpdatedAt >= remoteUpdatedAt));
       const nextTitle = useDraft && draft ? draft.title : memo.title ?? "";
       const nextTagsText = useDraft && draft ? draft.tagsText : memo.tags.join(", ");
-      const nextContent = useDraft && draft ? draft.contentJson : memo.contentJson;
+      const nextContent = useDraft && draft
+        ? draft.contentJson
+        : resolveMemoContentDoc(memo.contentJson, memo.contentMarkdown);
       const nextMarkdown = docToMarkdown(nextContent);
       const nextHasUnsavedChanges = Boolean(useDraft && !queuedUpdate);
 
@@ -1720,7 +1739,7 @@ const RichEditorPane = ({
     }
 
     if (memo) {
-      const nextMarkdown = docToMarkdown(memo.contentJson);
+      const nextMarkdown = docToMarkdown(resolveMemoContentDoc(memo.contentJson, memo.contentMarkdown));
       setMobilePlainText(nextMarkdown);
       setMobilePlainTextElementValue(mobileTextAreaRef.current, nextMarkdown);
     }
@@ -2306,6 +2325,24 @@ const RichEditorPane = ({
               </button>
             </div>
             <div className="hidden items-center gap-1 lg:flex">
+              <TooltipProvider delayDuration={350} skipDelayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant={desktopFocusMode ? "soft" : "ghost"}
+                      aria-label={t(desktopFocusMode ? "editor.exitFocusMode" : "editor.enterFocusMode")}
+                      aria-pressed={desktopFocusMode}
+                      onClick={onToggleDesktopFocusMode}
+                    >
+                      {desktopFocusMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {t(desktopFocusMode ? "editor.exitFocusMode" : "editor.focusMode")}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Button size="icon" variant="ghost" title="上一条笔记" aria-label="上一条笔记" onClick={onOpenPreviousMemo} disabled={!hasPreviousMemo}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -2481,7 +2518,7 @@ const RichEditorPane = ({
           </div>
         </div>
 
-        <div className="space-y-3 px-4 pb-4 pt-4 sm:px-7">
+        <div className="space-y-3 px-4 pb-4 pt-4 sm:px-7 lg:space-y-0 lg:pb-1 lg:pt-2">
           <input
             value={title}
             readOnly={effectiveReadOnly}

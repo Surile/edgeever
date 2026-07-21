@@ -35,7 +35,7 @@ The public demo resets every Monday at 1:00 AM (China Standard Time) and restore
 - EdgeEver ZIP import and export: one archive combines human-readable Markdown, Front Matter, nested notebook structure, and relative-path attachments with versioned structured data and revision history for complete recovery between EdgeEver instances.
 - AI Agent friendly: built-in MCP support lets tools such as Codex, Claude Code, and Antigravity read, organize, and maintain notes, while enabling integrations with Notion databases and Feishu Bitable.
 - Uncapped multi-device sync: self-hosted API means no restrictive commercial limits on the number of active login devices, supporting seamless synchronization across PC, tablet, and mobile (via PWA or browser).
-- Three-pane layout: notebook tree, note list, and main editor.
+- Three-pane layout: notebook tree, note list, and main editor, with a desktop focus mode that expands the selected note across the workspace.
 - Unlimited nested notebooks.
 - Rich text editing.
 - Switch between Markdown source and rich text views on desktop.
@@ -218,6 +218,10 @@ If you want to migrate notes from other platforms to EdgeEver, please refer to t
 ## Community and Feedback
 
 - Bugs, feature requests, and deployment issues: [GitHub Issues](https://github.com/tianma-if/edgeever/issues)
+
+## Docker Deployment Roadmap
+
+> 🐳 Docker-based self-hosting for VPS, NAS, and home servers is on the roadmap and will follow once the core features are stable. It is not yet available in current releases.
 
 ## Disclaimer
 

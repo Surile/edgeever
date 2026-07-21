@@ -8,6 +8,7 @@ import {
   getMobileEditorPlaceholder,
   getMobileEditorToolbarActionLabel,
   getMobileEditorToolbarLabel,
+  isMobileEditorActionDisabledInTableHeader,
 } from "./mobile-editor.ts";
 
 describe("mobile editor contract", () => {
@@ -18,10 +19,20 @@ describe("mobile editor contract", () => {
       "bulletList",
       "blockquote",
       "horizontalRule",
+      "insertTable",
+      "addTableRow",
+      "deleteTableRow",
+      "addTableColumn",
+      "deleteTableColumn",
+      "toggleTableHeader",
+      "deleteTable",
     ]);
     expect(MOBILE_EDITOR_TOOLBAR_ACTIONS.find(({ id }) => id === "bold")?.activeFlag).toBe(
       MOBILE_EDITOR_ACTIVE_FLAGS.bold
     );
+    expect(isMobileEditorActionDisabledInTableHeader("deleteTableRow")).toBe(true);
+    expect(isMobileEditorActionDisabledInTableHeader("deleteTableColumn")).toBe(false);
+    expect(MOBILE_EDITOR_ACTIVE_FLAGS.tableHeader & MOBILE_EDITOR_ACTIVE_FLAGS.table).toBe(0);
   });
 
   test("provides the same localized copy to both mobile clients", () => {
@@ -29,6 +40,7 @@ describe("mobile editor contract", () => {
     expect(getMobileEditorPlaceholder("en-US")).toBe("Start writing...");
     expect(getMobileEditorToolbarLabel("zh-CN")).toBe("编辑器工具栏");
     expect(getMobileEditorToolbarActionLabel("bulletList", "en-US")).toBe("Bullet list");
+    expect(getMobileEditorToolbarActionLabel("insertTable", "zh-CN")).toBe("插入表格");
     expect(getMobileEditorImageScaleLabel("zh-CN")).toBe("图片显示尺寸");
     expect(getMobileEditorImageWidthPresetLabel("medium", "en-US")).toBe("Medium");
   });
