@@ -63,6 +63,12 @@ import {
   resolveDemoPasswordHash,
   shouldUpsertDemoSeedRecord,
 } from "./demo-mode";
+import {
+  reindexMemos,
+  searchSemanticMemos,
+  syncChangedSemanticMemos,
+  type SemanticSearchBindings,
+} from "./semantic-search";
 
 type Bindings = {
   DB: D1Database;
@@ -75,6 +81,17 @@ type Bindings = {
   EDGE_EVER_DEMO_MODE?: string;
   EDGE_EVER_LOCAL_DEMO_SEED?: string;
   EDGE_EVER_ALLOW_UNAUTHENTICATED?: string;
+  EDGE_EVER_SEMANTIC_SEARCH_ENABLED?: string;
+  AI?: Ai;
+  MEMO_VECTORS?: Vectorize;
+};
+
+const getSemanticSearchBindings = (env: Bindings): SemanticSearchBindings | null => {
+  if (env.EDGE_EVER_SEMANTIC_SEARCH_ENABLED !== "true" || !env.AI || !env.MEMO_VECTORS) {
+    return null;
+  }
+
+  return { AI: env.AI, MEMO_VECTORS: env.MEMO_VECTORS };
 };
 
 type AuthContext = {
@@ -2556,11 +2573,18 @@ const worker = {
     return app.fetch(request, env, ctx);
   },
   async scheduled(controller: ScheduledController, env: Bindings, ctx: ExecutionContext) {
-    if (!isDemoMode(env)) {
-      return;
+    if (isDemoMode(env)) {
+      ctx.waitUntil(resetDemoData(env, controller.scheduledTime));
     }
 
-    ctx.waitUntil(resetDemoData(env, controller.scheduledTime));
+    const semanticSearch = getSemanticSearchBindings(env);
+    if (semanticSearch) {
+      ctx.waitUntil(
+        syncChangedSemanticMemos(semanticSearch, env.DB, 10).catch((error) => {
+          console.error("EdgeEver semantic index sync failed", error);
+        })
+      );
+    }
   },
 };
 
@@ -2667,7 +2691,7 @@ const handleMcpMessage = async (c: AppContext, payload: unknown): Promise<JsonRp
   if (request.method === "tools/list") {
     return {
       body: jsonRpcResult(request.id ?? null, {
-        tools: MCP_TOOLS,
+        tools: getMcpTools(c.env),
       }),
       status: 200,
     };
@@ -3077,6 +3101,39 @@ const MCP_TOOLS = [
   },
 ];
 
+const SEMANTIC_MCP_TOOLS = [
+  {
+    name: "semantic_search_memos",
+    description:
+      "Search active memos by meaning using the optional Cloudflare Vectorize index. Use search_memos for exact text, tag, or date filters.",
+    inputSchema: {
+      type: "object",
+      required: ["query"],
+      additionalProperties: false,
+      properties: {
+        query: { type: "string", minLength: 1, maxLength: 4_000 },
+        limit: { type: "integer", minimum: 1, maximum: 20 },
+      },
+    },
+  },
+  {
+    name: "reindex_memos",
+    description:
+      "Index a page of memos for optional semantic search. Repeat with nextCursor until it is null after imports or after enabling Vectorize.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 25 },
+        cursor: { type: "string" },
+      },
+    },
+  },
+];
+
+const getMcpTools = (env: Bindings) =>
+  getSemanticSearchBindings(env) ? [...MCP_TOOLS, ...SEMANTIC_MCP_TOOLS] : MCP_TOOLS;
+
 const callMcpTool = async (
   c: AppContext,
   auth: AuthContext,
@@ -3101,6 +3158,48 @@ const callMcpTool = async (
           limit: clampNumber(Number(args.limit ?? 20), 1, 50),
         }),
       };
+    }
+    case "semantic_search_memos": {
+      assertScope(auth, "read:memos");
+      const semanticSearch = getSemanticSearchBindings(c.env);
+
+      if (!semanticSearch) {
+        throw new AppError(
+          "semantic_search_unavailable",
+          "Semantic search is not enabled. Configure the optional Workers AI and Vectorize bindings first.",
+          503
+        );
+      }
+
+      return {
+        memos: await searchSemanticMemos(
+          semanticSearch,
+          c.env.DB,
+          auth.workspaceId,
+          getRequiredString(args.query, "query"),
+          clampNumber(Number(args.limit ?? 10), 1, 20)
+        ),
+      };
+    }
+    case "reindex_memos": {
+      assertScope(auth, "write:memos");
+      const semanticSearch = getSemanticSearchBindings(c.env);
+
+      if (!semanticSearch) {
+        throw new AppError(
+          "semantic_search_unavailable",
+          "Semantic search is not enabled. Configure the optional Workers AI and Vectorize bindings first.",
+          503
+        );
+      }
+
+      return await reindexMemos(
+        semanticSearch,
+        c.env.DB,
+        auth.workspaceId,
+        clampNumber(Number(args.limit ?? 10), 1, 25),
+        getOptionalString(args.cursor) ?? undefined
+      );
     }
     case "list_memos": {
       assertScope(auth, "read:memos");
