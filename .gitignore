@@ -1,0 +1,26 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.android.local.example
+
+node_modules/
+dist/
+build/
+coverage/
+
+.wrangler/
+.wrangler.generated-migrations/
+.wrangler.generated*.toml
+.dev.vars
+wrangler.local.toml
+
+*.log
+
+# Android signing material must never be committed.
+*.jks
+*.keystore
+*.p12
+credentials.json
+*-key.pem

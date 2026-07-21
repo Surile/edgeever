@@ -1,0 +1,120 @@
+import Image from "@tiptap/extension-image";
+import { Markdown, MarkdownManager } from "@tiptap/markdown";
+import StarterKit from "@tiptap/starter-kit";
+
+export type TiptapTextNode = {
+  type: "text";
+  text: string;
+  marks?: TiptapMark[];
+};
+
+export type TiptapMark = {
+  type: string;
+  attrs?: Record<string, unknown>;
+};
+
+export type TiptapNode = {
+  type: string;
+  attrs?: Record<string, unknown>;
+  content?: Array<TiptapNode | TiptapTextNode>;
+};
+
+export type TiptapDoc = {
+  type: "doc";
+  content: TiptapNode[];
+};
+
+export const DEFAULT_MEMO_TITLE = "无标题笔记";
+
+export const emptyDoc = (): TiptapDoc => ({
+  type: "doc",
+  content: [{ type: "paragraph" }],
+});
+
+const markdownManager = new MarkdownManager({
+  extensions: [StarterKit, Image, Markdown],
+});
+
+export const markdownToDoc = (markdown: string): TiptapDoc => {
+  if (!markdown.trim()) {
+    return emptyDoc();
+  }
+
+  return markdownManager.parse(markdown.replace(/\r\n?/g, "\n")) as TiptapDoc;
+};
+
+export const docToText = (doc: unknown): string => {
+  const pieces: string[] = [];
+
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    const current = node as { type?: unknown; text?: unknown; attrs?: Record<string, unknown>; content?: unknown };
+
+    if (typeof current.text === "string") {
+      pieces.push(current.text);
+    }
+
+    if (current.type === "image") {
+      const label =
+        getStringAttr(current.attrs, "alt") ||
+        getStringAttr(current.attrs, "title") ||
+        getStringAttr(current.attrs, "filename");
+
+      if (label) {
+        pieces.push(label);
+      }
+    }
+
+    if (Array.isArray(current.content)) {
+      for (const child of current.content) {
+        walk(child);
+      }
+    }
+  };
+
+  walk(doc);
+
+  return pieces.join(" ").replace(/\s+/g, " ").trim();
+};
+
+export const docToMarkdown = (doc: unknown): string => {
+  if (!doc || typeof doc !== "object") {
+    return "";
+  }
+
+  const root = doc as { content?: unknown };
+
+  if (!Array.isArray(root.content)) {
+    return "";
+  }
+
+  return markdownManager.serialize(doc as Parameters<typeof markdownManager.serialize>[0]);
+};
+
+const getStringAttr = (attrs: Record<string, unknown> | undefined, key: string) => {
+  const value = attrs?.[key];
+  return typeof value === "string" ? value.trim() : "";
+};
+
+export const createExcerpt = (text: string, maxLength = 30): string => {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength)}...` : normalized;
+};
+
+export const normalizeTags = (tags: unknown): string[] => {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      tags
+        .map((tag) => (typeof tag === "string" ? tag.trim() : ""))
+        .filter(Boolean)
+        .map((tag) => tag.replace(/^#/, ""))
+    )
+  ).slice(0, 24);
+};

@@ -1,0 +1,37 @@
+# AI Agent Cloudflare Deployment
+
+Use this contract when deploying EdgeEver from a GitHub repository to Cloudflare.
+
+## Constraints
+
+- Use local deployment only for the first installation or emergency recovery. Routine updates must use Cloudflare Workers Builds.
+- Keep account IDs, resource names, API tokens, domains, and passwords in the git-ignored `.env.local`; never hard-code or commit them.
+- Use the repository deployment scripts. Do not add a separate GitHub Actions deployment for the Worker.
+
+## First Installation
+
+Run in order:
+
+```sh
+bun run deploy:setup
+bun run deploy:doctor
+bun run deploy:manual
+```
+
+If the user supplied a custom initial password, replace the first command with:
+
+```sh
+EDGE_EVER_PASSWORD='<first-login-password>' bun run deploy:setup
+```
+
+Do not deploy until `deploy:doctor` passes. `deploy:manual` uses the same build, migration, Worker deployment, and verification core as Cloudflare one-click deployment and Workers Builds. After deployment, verify that `/api/health` returns `200` with `"ok": true`, then verify `/api/openapi.json` and login. A `database_not_ready` or `auth_not_configured` response means deployment is incomplete and must not be handed off as successful. The default initial login is `admin` / `admin123`.
+
+## Automatic Updates
+
+After the first deployment, run:
+
+```sh
+bun run deploy:builds:setup
+```
+
+Follow [Cloudflare Workers Builds](cloudflare-workers-builds.md) only when the command requests authorization or an API token. Deployment is complete when the verification build succeeds and future pushes to `main` automatically deploy the instance. Confirm that the repository's **Update deployed EdgeEver** workflow is available and enabled; GitHub disables scheduled workflows by default on public forks. Its default `stable` channel checks formal upstream Releases daily.

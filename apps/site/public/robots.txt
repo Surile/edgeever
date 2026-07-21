@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://edgeever.org/sitemap-index.xml
