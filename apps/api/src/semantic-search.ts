@@ -182,6 +182,41 @@ export const reindexMemos = async (
   };
 };
 
+export const syncSemanticMemo = async (
+  env: SemanticSearchBindings,
+  db: D1Database,
+  workspaceId: string,
+  memoId: string
+) => {
+  const memo = await db
+    .prepare(
+      `SELECT m.id, m.notebook_id, m.title, c.content_text, c.revision
+       FROM memos m
+       INNER JOIN memo_contents c ON c.memo_id = m.id
+       WHERE m.workspace_id = ? AND m.id = ? AND m.is_deleted = 0`
+    )
+    .bind(workspaceId, memoId)
+    .first<MemoRow>();
+
+  if (memo) {
+    const indexedChunks = await indexMemo(env, db, workspaceId, memo);
+    return { indexed: indexedChunks > 0, indexedChunks, removed: false };
+  }
+
+  const previous = await db
+    .prepare(`SELECT memo_id, chunk_count FROM memo_semantic_index WHERE memo_id = ? AND workspace_id = ?`)
+    .bind(memoId, workspaceId)
+    .first<StaleIndexRow>();
+
+  if (!previous) {
+    return { indexed: false, indexedChunks: 0, removed: false };
+  }
+
+  await deleteVectors(env.MEMO_VECTORS, memoId, previous.chunk_count);
+  await db.prepare(`DELETE FROM memo_semantic_index WHERE memo_id = ?`).bind(memoId).run();
+  return { indexed: false, indexedChunks: 0, removed: true };
+};
+
 export const syncChangedSemanticMemos = async (env: SemanticSearchBindings, db: D1Database, limit: number) => {
   const stale = await db
     .prepare(

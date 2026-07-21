@@ -14,9 +14,11 @@ When enabled, the MCP endpoint exposes two additional tools:
 - `reindex_memos` indexes a page of the current workspace. Run it after the
   first deployment, an import, or a metadata-index change.
 
-The Worker also runs a small incremental indexing job every five minutes. Search
-results are checked against D1 again before they are returned, so trashed,
-deleted, or out-of-date memos are never returned.
+Creating or saving a memo queues its own indexing work immediately after the
+write response is sent, so it does not make note saving wait for Workers AI.
+The Worker also runs a small incremental indexing job every five minutes as a
+retry and import backstop. Search results are checked against D1 again before
+they are returned, so trashed, deleted, or out-of-date memos are never returned.
 
 ## Enable it
 

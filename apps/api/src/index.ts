@@ -67,6 +67,7 @@ import {
   reindexMemos,
   searchSemanticMemos,
   syncChangedSemanticMemos,
+  syncSemanticMemo,
   type SemanticSearchBindings,
 } from "./semantic-search";
 
@@ -276,6 +277,20 @@ type ResourceStatsRow = {
 };
 
 type AppContext = Context<{ Bindings: Bindings; Variables: { auth: AuthContext } }>;
+
+const scheduleSemanticMemoSync = (c: AppContext, memoId: string) => {
+  const semanticSearch = getSemanticSearchBindings(c.env);
+
+  if (!semanticSearch) {
+    return;
+  }
+
+  c.executionCtx.waitUntil(
+    syncSemanticMemo(semanticSearch, c.env.DB, getWorkspaceId(c), memoId).catch((error) => {
+      console.error("EdgeEver semantic memo sync failed", { memoId, error });
+    })
+  );
+};
 
 const SESSION_COOKIE = "edgeever_session";
 const DEFAULT_WORKSPACE_ID = "ws_default";
@@ -1381,6 +1396,7 @@ app.post("/api/v1/memos", zValidator("json", MemoCreateSchema), async (c) => {
     }),
   ]);
 
+  scheduleSemanticMemoSync(c, id);
   return c.json({ memo: await getMemoDetail(c.env.DB, getWorkspaceId(c), id) }, 201);
 });
 
@@ -2387,6 +2403,7 @@ const updateMemoFromInput = async (c: AppContext, id: string, input: MemoUpdateI
     }),
   ]);
 
+  scheduleSemanticMemoSync(c, id);
   return c.json({ memo: await getMemoDetail(c.env.DB, workspaceId, id) });
 };
 
@@ -2425,6 +2442,7 @@ app.delete("/api/v1/memos/:id", async (c) => {
       auditStatement(c.env.DB, actor.actorType, actor.actorId, "memo.delete_permanent", "memo", id, {}),
     ]);
 
+    scheduleSemanticMemoSync(c, id);
     return c.json({ ok: true });
   }
 
@@ -2443,6 +2461,7 @@ app.delete("/api/v1/memos/:id", async (c) => {
     auditStatement(c.env.DB, actor.actorType, actor.actorId, "memo.delete", "memo", id, {}),
   ]);
 
+  scheduleSemanticMemoSync(c, id);
   return c.json({ ok: true });
 });
 
@@ -2494,6 +2513,7 @@ app.post("/api/v1/memos/:id/restore", async (c) => {
     }),
   ]);
 
+  scheduleSemanticMemoSync(c, id);
   return c.json({ memo: await getMemoDetail(c.env.DB, workspaceId, id) });
 });
 
@@ -3237,6 +3257,7 @@ const callMcpTool = async (
         updatedAt: getOptionalString(args.updatedAt) ?? undefined,
       }, actor, actorLabel);
 
+      scheduleSemanticMemoSync(c, memo.id);
       return { memo };
     }
     case "update_memo": {
@@ -3269,6 +3290,7 @@ const callMcpTool = async (
         throw new Error(result.message);
       }
 
+      scheduleSemanticMemoSync(c, result.memo.id);
       return { memo: result.memo };
     }
     case "trash_memos": {
