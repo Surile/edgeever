@@ -668,6 +668,10 @@ export const zhCN = {
     description: "搭配 AI Agent 的进阶玩法。",
     copyPrompt: "复制 Prompt",
     prompts: {
+      semanticProjectContext: {
+        title: "语义检索项目上下文",
+        prompt: "请先使用 EdgeEver MCP 的 semantic_search_memos，按语义检索与我接下来要做的项目或问题相关的笔记；根据结果使用 get_memo 读取最相关笔记的全文。先输出：已有背景、关键约束、可复用的方案、待确认问题，并标注每项对应的笔记标题或 memo id。随后基于这些笔记开始给出项目设计和代码实现建议。不要修改任何笔记。",
+      },
       persona: {
         title: "人物画像",
         prompt: "请通过 EdgeEver MCP 读取我的笔记，基于真实笔记内容为我整理一份人物画像。请只根据笔记中的证据判断，不要做心理诊断，不要夸张定性。输出包括：长期关注的主题、做事偏好、能力线索、反复出现的问题、近期动向，并在每条结论后列出相关笔记标题或 memo id。",

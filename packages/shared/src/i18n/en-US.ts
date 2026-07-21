@@ -668,6 +668,10 @@ export const enUS = {
     description: "Advanced workflows with AI Agents.",
     copyPrompt: "Copy prompt",
     prompts: {
+      semanticProjectContext: {
+        title: "Semantic project context",
+        prompt: "First use EdgeEver MCP's semantic_search_memos to find notes that are semantically related to the project or problem I am about to work on, then use get_memo to read the full content of the most relevant notes. First report the existing context, key constraints, reusable approaches, and open questions, citing the title or memo id for each. Then use those notes to propose the project design and code implementation. Do not modify any notes.",
+      },
       persona: {
         title: "Persona profile",
         prompt: "Use EdgeEver MCP to read my notes and create a persona profile based on the real note content. Judge only from evidence in the notes, do not make psychological diagnoses, and do not exaggerate traits. Include long-term themes, work preferences, capability signals, recurring problems, recent direction, and list related note titles or memo ids after each conclusion.",

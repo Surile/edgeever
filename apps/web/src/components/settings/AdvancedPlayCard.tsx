@@ -7,7 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { cn } from "@/lib/utils";
 import { copyTextToClipboard } from "./settings-utils";
 
-const ADVANCED_PROMPT_KEYS = ["persona", "knowledgeMap", "tagAdvice"] as const;
+const ADVANCED_PROMPT_KEYS = ["semanticProjectContext", "persona", "knowledgeMap", "tagAdvice"] as const;
 
 export const AdvancedPlayCard = () => {
   const { t } = useTranslation();
