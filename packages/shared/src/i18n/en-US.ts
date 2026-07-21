@@ -650,6 +650,10 @@ export const enUS = {
     semanticIndexUpToDate: "Historical memos are indexed. Future memos will sync incrementally.",
     semanticIndexAction: "Build index",
     semanticIndexing: "Building index…",
+    semanticIndexForceAction: "Force rebuild",
+    semanticIndexForceTitle: "Force rebuild the semantic index?",
+    semanticIndexForceDescription: "This rewrites vectors for every historical memo in the current workspace to repair the Vectorize metadata index. It uses Workers AI embedding compute.",
+    semanticIndexForceConfirm: "Start rebuild",
     semanticIndexComplete: "Indexed {{memos}} memos across {{chunks}} text chunks.",
     semanticIndexFailed: "Indexing failed. Check your Cloudflare bindings and deployment, then try again.",
     scopes: {

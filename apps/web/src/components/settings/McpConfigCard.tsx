@@ -332,6 +332,7 @@ export const McpConfigCard = () => {
   const [scopeDefaultsSynced, setScopeDefaultsSynced] = useState(false);
   const [createdToken, setCreatedToken] = useState<{ token: string; apiToken: ApiToken } | null>(null);
   const [tokenDeleteConfirmation, setTokenDeleteConfirmation] = useState<ApiToken | null>(null);
+  const [forceReindexConfirmation, setForceReindexConfirmation] = useState(false);
   const [semanticIndexState, setSemanticIndexState] = useState<"idle" | "running" | "complete" | "error">("idle");
   const [semanticIndexResult, setSemanticIndexResult] = useState<{ memos: number; chunks: number } | null>(null);
 
@@ -405,7 +406,7 @@ export const McpConfigCard = () => {
     createMutation.mutate({ name: name.trim(), scopes });
   };
 
-  const handleSemanticReindex = async () => {
+  const handleSemanticReindex = async (force = false) => {
     setSemanticIndexState("running");
     setSemanticIndexResult(null);
     let cursor: string | undefined;
@@ -414,7 +415,7 @@ export const McpConfigCard = () => {
 
     try {
       do {
-        const result = await api.reindexSemanticMemos({ cursor, limit: 10 });
+        const result = await api.reindexSemanticMemos({ cursor, force, limit: 10 });
         indexedMemos += result.indexedMemos;
         indexedChunks += result.indexedChunks;
         cursor = result.nextCursor ?? undefined;
@@ -494,18 +495,33 @@ export const McpConfigCard = () => {
                   <p className="mt-1 text-[11px] font-medium text-rose-600">{t("mcp.semanticIndexFailed")}</p>
                 )}
               </div>
-              {semanticSearchQuery.data?.needsIndexing && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="shrink-0 bg-white"
-                  type="button"
-                  disabled={semanticIndexState === "running"}
-                  onClick={() => void handleSemanticReindex()}
-                >
-                  {semanticIndexState === "running" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
-                  {semanticIndexState === "running" ? t("mcp.semanticIndexing") : t("mcp.semanticIndexAction")}
-                </Button>
+              {semanticSearchQuery.data?.enabled && (
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {semanticSearchQuery.data.needsIndexing && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="bg-white"
+                      type="button"
+                      disabled={semanticIndexState === "running"}
+                      onClick={() => void handleSemanticReindex()}
+                    >
+                      {semanticIndexState === "running" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                      {semanticIndexState === "running" ? t("mcp.semanticIndexing") : t("mcp.semanticIndexAction")}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                    type="button"
+                    disabled={semanticIndexState === "running"}
+                    onClick={() => setForceReindexConfirmation(true)}
+                  >
+                    {semanticIndexState === "running" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Database className="h-3.5 w-3.5" />}
+                    {semanticIndexState === "running" ? t("mcp.semanticIndexing") : t("mcp.semanticIndexForceAction")}
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -534,6 +550,20 @@ export const McpConfigCard = () => {
             deleteTokenMutation.mutate(tokenDeleteConfirmation.id, {
               onSuccess: () => setTokenDeleteConfirmation(null),
             });
+          }}
+        />
+      )}
+      {forceReindexConfirmation && (
+        <AppConfirmDialog
+          title={t("mcp.semanticIndexForceTitle")}
+          description={t("mcp.semanticIndexForceDescription")}
+          confirmLabel={t("mcp.semanticIndexForceConfirm")}
+          tone="primary"
+          isWorking={semanticIndexState === "running"}
+          onCancel={() => setForceReindexConfirmation(false)}
+          onConfirm={() => {
+            setForceReindexConfirmation(false);
+            void handleSemanticReindex(true);
           }}
         />
       )}

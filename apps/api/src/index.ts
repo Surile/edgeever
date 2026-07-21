@@ -902,7 +902,8 @@ app.post("/api/v1/semantic-search/reindex", async (c) => {
     c.env.DB,
     getWorkspaceId(c),
     clampNumber(Number(input.limit ?? 10), 1, 25),
-    getOptionalString(input.cursor) ?? undefined
+    getOptionalString(input.cursor) ?? undefined,
+    input.force === true
   );
 
   return c.json(result);

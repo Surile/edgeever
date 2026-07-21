@@ -211,7 +211,7 @@ export const api = {
 
   getSemanticSearchStatus: () => request<SemanticSearchStatusResponse>("/api/v1/semantic-search/status"),
 
-  reindexSemanticMemos: (payload: { cursor?: string; limit?: number }) =>
+  reindexSemanticMemos: (payload: { cursor?: string; force?: boolean; limit?: number }) =>
     request<SemanticReindexResponse>("/api/v1/semantic-search/reindex", {
       method: "POST",
       body: JSON.stringify(payload),

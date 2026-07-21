@@ -650,6 +650,10 @@ export const zhCN = {
     semanticIndexUpToDate: "历史笔记已完成索引，后续笔记会自动增量同步。",
     semanticIndexAction: "建立索引",
     semanticIndexing: "正在建立索引…",
+    semanticIndexForceAction: "强制重建",
+    semanticIndexForceTitle: "强制重建语义索引？",
+    semanticIndexForceDescription: "这会重写当前工作区所有历史笔记的向量，用于修复 Vectorize 元数据索引。过程会产生 Workers AI 嵌入计算。",
+    semanticIndexForceConfirm: "开始重建",
     semanticIndexComplete: "已索引 {{memos}} 篇笔记，共 {{chunks}} 个文本片段。",
     semanticIndexFailed: "建立索引失败，请检查 Cloudflare 绑定和部署状态后重试。",
     scopes: {
