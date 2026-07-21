@@ -21,6 +21,7 @@ import {
   getMobileEditorPlaceholder,
   getMobileEditorToolbarActionLabel,
   getMobileEditorToolbarLabel,
+  isMobileEditorActionDisabledInTableHeader,
   type MobileEditorTableActionId,
   type MobileEditorToolbarActionId,
 } from "@edgeever/shared/mobile-editor";
@@ -256,7 +257,8 @@ export default function LocalTiptapEditor(props: LocalTiptapEditorProps) {
       (activeEditor?.isActive("bold") ? MOBILE_EDITOR_ACTIVE_FLAGS.bold : 0) |
       (activeEditor?.isActive("bulletList") ? MOBILE_EDITOR_ACTIVE_FLAGS.bulletList : 0) |
       (activeEditor?.isActive("blockquote") ? MOBILE_EDITOR_ACTIVE_FLAGS.blockquote : 0) |
-      (activeEditor?.isActive("table") ? MOBILE_EDITOR_ACTIVE_FLAGS.table : 0),
+      (activeEditor?.isActive("table") ? MOBILE_EDITOR_ACTIVE_FLAGS.table : 0) |
+      (activeEditor?.isActive("tableHeader") ? MOBILE_EDITOR_ACTIVE_FLAGS.tableHeader : 0),
   });
 
   const insertImage = async () => {
@@ -292,7 +294,9 @@ export default function LocalTiptapEditor(props: LocalTiptapEditorProps) {
         chain.addRowAfter().run();
         return;
       case "deleteTableRow":
-        chain.deleteRow().run();
+        if (!editor?.isActive("tableHeader")) {
+          chain.deleteRow().run();
+        }
         return;
       case "addTableColumn":
         chain.addColumnAfter().run();
@@ -349,7 +353,10 @@ export default function LocalTiptapEditor(props: LocalTiptapEditorProps) {
           <ToolbarButton
             key={action.id}
             active={action.activeFlag > 0 && Boolean(toolbarState & action.activeFlag)}
-            disabled={(action.requiresTable && !(toolbarState & MOBILE_EDITOR_ACTIVE_FLAGS.table)) || (action.id === "insertTable" && Boolean(toolbarState & MOBILE_EDITOR_ACTIVE_FLAGS.table))}
+            disabled={(action.requiresTable && !(toolbarState & MOBILE_EDITOR_ACTIVE_FLAGS.table))
+              || (action.id === "insertTable" && Boolean(toolbarState & MOBILE_EDITOR_ACTIVE_FLAGS.table))
+              || (isMobileEditorActionDisabledInTableHeader(action.id)
+                && Boolean(toolbarState & MOBILE_EDITOR_ACTIVE_FLAGS.tableHeader))}
             icon={toolbarIcons[action.id]}
             label={getMobileEditorToolbarActionLabel(action.id, props.locale)}
             onRun={toolbarHandlers[action.id]}
@@ -912,10 +919,10 @@ const getEditorStyles = (theme: "light" | "dark") => `
   .edgeever-editor-content code { border-radius: 4px; padding: 2px 4px; background: ${theme === "dark" ? "#1e293b" : "#f1f5f9"}; }
   .edgeever-editor-content pre code { padding: 0; background: transparent; }
   .edgeever-editor-content img { display: block; max-width: 100%; height: auto; margin: 14px auto; border-radius: 10px; }
-  .edgeever-editor-content .tableWrapper { width: fit-content; max-width: 100%; overflow-x: auto; margin-top: 20px; margin-right: auto; margin-bottom: 20px; margin-left: auto; border: 1px solid ${theme === "dark" ? "#334155" : "#d8d8d8"}; border-radius: 2px; background: ${theme === "dark" ? "#0f172a" : "#fff"}; overscroll-behavior-inline: contain; scrollbar-color: rgba(100, 116, 139, 0.28) transparent; }
-  .edgeever-editor-content table { width: 42rem; min-width: 42rem !important; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-  .edgeever-editor-content table col { width: auto !important; }
-  .edgeever-editor-content th, .edgeever-editor-content td { position: relative; min-width: 7.5rem; border: 0; border-right: 1px solid ${theme === "dark" ? "#334155" : "#dedede"}; border-bottom: 1px solid ${theme === "dark" ? "#334155" : "#dedede"}; padding: 7px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; line-height: 1.4; transition: background-color 120ms ease; }
+  .edgeever-editor-content .tableWrapper { width: fit-content; max-width: 100%; overflow-x: auto; margin-top: 20px; margin-right: auto; margin-bottom: 20px; margin-left: 0; border: 1px solid ${theme === "dark" ? "#334155" : "#d8d8d8"}; border-radius: 2px; background: ${theme === "dark" ? "#0f172a" : "#fff"}; overscroll-behavior-inline: contain; scrollbar-color: rgba(100, 116, 139, 0.28) transparent; }
+  .edgeever-editor-content table { width: max-content; min-width: 42rem !important; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  .edgeever-editor-content table col { width: 14rem !important; }
+  .edgeever-editor-content th, .edgeever-editor-content td { position: relative; width: 14rem; min-width: 14rem; border: 0; border-right: 1px solid ${theme === "dark" ? "#334155" : "#dedede"}; border-bottom: 1px solid ${theme === "dark" ? "#334155" : "#dedede"}; padding: 7px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; line-height: 1.4; transition: background-color 120ms ease; }
   .edgeever-editor-content th { background: ${theme === "dark" ? "#27303f" : "#f0f0f0"}; color: ${theme === "dark" ? "#f8fafc" : "#111827"}; font-size: 14px; font-weight: 700; }
   .edgeever-editor-content th:last-child, .edgeever-editor-content td:last-child { border-right: 0; }
   .edgeever-editor-content tr:last-child td { border-bottom: 0; }

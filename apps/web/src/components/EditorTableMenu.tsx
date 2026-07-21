@@ -21,9 +21,12 @@ export const EditorTableMenu = ({ editor, readOnly }: EditorTableMenuProps) => {
   const ready = Boolean(editor && !editor.isDestroyed);
   const tableActiveState = useEditorState({
     editor,
-    selector: ({ editor: activeEditor }) => Boolean(activeEditor?.isActive("table")),
+    selector: ({ editor: activeEditor }) =>
+      (activeEditor?.isActive("table") ? 1 : 0)
+      | (activeEditor?.isActive("tableHeader") ? 2 : 0),
   });
-  const inTable = Boolean(tableActiveState);
+  const inTable = Boolean((tableActiveState ?? 0) & 1);
+  const inTableHeader = Boolean((tableActiveState ?? 0) & 2);
   const disabled = readOnly || !ready;
 
   const run = (command: (activeEditor: Editor) => void) => {
@@ -68,7 +71,14 @@ export const EditorTableMenu = ({ editor, readOnly }: EditorTableMenuProps) => {
         <DropdownMenuItem disabled={!inTable} onSelect={() => run((activeEditor) => activeEditor.chain().focus().addRowAfter().run())}>
           {t("editorToolbar.addTableRow")}
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={!inTable} onSelect={() => run((activeEditor) => activeEditor.chain().focus().deleteRow().run())}>
+        <DropdownMenuItem
+          disabled={!inTable || inTableHeader}
+          onSelect={() => run((activeEditor) => {
+            if (!activeEditor.isActive("tableHeader")) {
+              activeEditor.chain().focus().deleteRow().run();
+            }
+          })}
+        >
           {t("editorToolbar.deleteTableRow")}
         </DropdownMenuItem>
         <DropdownMenuItem disabled={!inTable} onSelect={() => run((activeEditor) => activeEditor.chain().focus().addColumnAfter().run())}>

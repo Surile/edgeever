@@ -2,6 +2,7 @@ import { Bold, Check, ChevronDown, ImagePlus, List, Minus, Quote } from "lucide-
 import {
   MOBILE_EDITOR_TOOLBAR_ACTIONS,
   getMobileEditorToolbarActionLabel,
+  isMobileEditorActionDisabledInTableHeader,
   type MobileEditorTableActionId,
   type MobileEditorToolbarActionId,
 } from "@edgeever/shared/mobile-editor";
@@ -39,6 +40,7 @@ export const MobileEditorToolbar = ({
   bulletListActive,
   blockquoteActive,
   tableActive,
+  tableHeaderActive,
   onPickImage,
   onToggleBold,
   onToggleBulletList,
@@ -51,6 +53,7 @@ export const MobileEditorToolbar = ({
   bulletListActive: boolean;
   blockquoteActive: boolean;
   tableActive: boolean;
+  tableHeaderActive: boolean;
   onPickImage: () => void;
   onToggleBold: () => void;
   onToggleBulletList: () => void;
@@ -107,7 +110,10 @@ export const MobileEditorToolbar = ({
             aria-label={label}
             title={label}
             aria-pressed={activeStates[id]}
-            disabled={disabled || (requiresTable && !tableActive) || (id === "insertTable" && tableActive)}
+            disabled={disabled
+              || (requiresTable && !tableActive)
+              || (id === "insertTable" && tableActive)
+              || (isMobileEditorActionDisabledInTableHeader(id) && tableHeaderActive)}
             onPointerDown={(event) => event.preventDefault()}
             onClick={handlers[id]}
           >

@@ -8,6 +8,7 @@ import {
   getMobileEditorPlaceholder,
   getMobileEditorToolbarActionLabel,
   getMobileEditorToolbarLabel,
+  isMobileEditorActionDisabledInTableHeader,
 } from "./mobile-editor.ts";
 
 describe("mobile editor contract", () => {
@@ -29,6 +30,9 @@ describe("mobile editor contract", () => {
     expect(MOBILE_EDITOR_TOOLBAR_ACTIONS.find(({ id }) => id === "bold")?.activeFlag).toBe(
       MOBILE_EDITOR_ACTIVE_FLAGS.bold
     );
+    expect(isMobileEditorActionDisabledInTableHeader("deleteTableRow")).toBe(true);
+    expect(isMobileEditorActionDisabledInTableHeader("deleteTableColumn")).toBe(false);
+    expect(MOBILE_EDITOR_ACTIVE_FLAGS.tableHeader & MOBILE_EDITOR_ACTIVE_FLAGS.table).toBe(0);
   });
 
   test("provides the same localized copy to both mobile clients", () => {

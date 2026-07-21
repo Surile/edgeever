@@ -461,7 +461,7 @@ input {
   margin-top: 1.25rem;
   margin-right: auto;
   margin-bottom: 1.25rem;
-  margin-left: auto;
+  margin-left: 0;
   border: 1px solid #d8d8d8;
   border-radius: 2px;
   background: #fff;
@@ -470,7 +470,7 @@ input {
 }
 
 .edgeever-mobile-tiptap-content table {
-  width: 42rem;
+  width: max-content;
   min-width: 42rem !important;
   border-collapse: separate;
   border-spacing: 0;
@@ -478,13 +478,14 @@ input {
 }
 
 .edgeever-mobile-tiptap-content table col {
-  width: auto !important;
+  width: 14rem !important;
 }
 
 .edgeever-mobile-tiptap-content th,
 .edgeever-mobile-tiptap-content td {
   position: relative;
-  min-width: 7.5rem;
+  width: 14rem;
+  min-width: 14rem;
   border: 0;
   border-right: 1px solid #dedede;
   border-bottom: 1px solid #dedede;

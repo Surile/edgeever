@@ -24,6 +24,7 @@ export const MOBILE_EDITOR_ACTIVE_FLAGS = {
   bulletList: 8,
   blockquote: 16,
   table: 32,
+  tableHeader: 64,
 } as const;
 
 export const MOBILE_EDITOR_TOOLBAR_ACTIONS = [
@@ -44,6 +45,10 @@ export const MOBILE_EDITOR_TOOLBAR_ACTIONS = [
   activeFlag: number;
   requiresTable: boolean;
 }>;
+
+export const isMobileEditorActionDisabledInTableHeader = (
+  action: MobileEditorToolbarActionId
+): boolean => action === "deleteTableRow";
 
 const MOBILE_EDITOR_COPY = {
   "zh-CN": {

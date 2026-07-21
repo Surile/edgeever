@@ -797,6 +797,7 @@ export const MobileStandaloneTiptapEditor = ({
 
   const fallbackMarkdown = memo ? docToMarkdown(contentJsonRef.current) : "";
   const tableActive = Boolean(editor?.isActive("table"));
+  const tableHeaderActive = Boolean(editor?.isActive("tableHeader"));
 
   const runEditorCommand = (command: () => boolean) => {
     if (editorActionDisabled || !editor) {
@@ -820,7 +821,7 @@ export const MobileStandaloneTiptapEditor = ({
         case "addTableRow":
           return chain.addRowAfter().run();
         case "deleteTableRow":
-          return chain.deleteRow().run();
+          return editor?.isActive("tableHeader") ? false : chain.deleteRow().run();
         case "addTableColumn":
           return chain.addColumnAfter().run();
         case "deleteTableColumn":
@@ -871,6 +872,7 @@ export const MobileStandaloneTiptapEditor = ({
           bulletListActive={Boolean(editor?.isActive("bulletList"))}
           blockquoteActive={Boolean(editor?.isActive("blockquote"))}
           tableActive={tableActive}
+          tableHeaderActive={tableHeaderActive}
           onPickImage={() => imageInputRef.current?.click()}
           onToggleBold={() => runEditorCommand(() => editor?.chain().focus().toggleBold().run() ?? false)}
           onToggleBulletList={() => runEditorCommand(() => editor?.chain().focus().toggleBulletList().run() ?? false)}
