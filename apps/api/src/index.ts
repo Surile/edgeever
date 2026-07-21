@@ -3204,13 +3204,14 @@ const SEMANTIC_MCP_TOOLS = [
   {
     name: "reindex_memos",
     description:
-      "Index a page of memos for optional semantic search. Repeat with nextCursor until it is null after imports or after enabling Vectorize.",
+      "Index a page of memos for optional semantic search. Repeat with nextCursor until it is null after imports or after enabling Vectorize. Set force to true only when rebuilding existing vectors after a metadata-index change.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
       properties: {
         limit: { type: "integer", minimum: 1, maximum: 25 },
         cursor: { type: "string" },
+        force: { type: "boolean" },
       },
     },
   },
@@ -3283,7 +3284,8 @@ const callMcpTool = async (
         c.env.DB,
         auth.workspaceId,
         clampNumber(Number(args.limit ?? 10), 1, 25),
-        getOptionalString(args.cursor) ?? undefined
+        getOptionalString(args.cursor) ?? undefined,
+        args.force === true
       );
     }
     case "list_memos": {

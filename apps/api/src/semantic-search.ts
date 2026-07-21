@@ -97,14 +97,25 @@ const purgeStaleMemos = async (env: SemanticSearchBindings, db: D1Database, work
   return rows.results.length;
 };
 
-const indexMemo = async (env: SemanticSearchBindings, db: D1Database, workspaceId: string, memo: MemoRow) => {
+const indexMemo = async (
+  env: SemanticSearchBindings,
+  db: D1Database,
+  workspaceId: string,
+  memo: MemoRow,
+  force = false
+) => {
   const previous = await db
     .prepare(`SELECT memo_id, revision, chunk_count FROM memo_semantic_index WHERE memo_id = ?`)
     .bind(memo.id)
     .first<IndexRow>();
 
-  if (previous?.revision === memo.revision) {
+  if (!force && previous?.revision === memo.revision) {
     return 0;
+  }
+
+  // A forced rebuild must remain retryable if deleting or recreating vectors fails.
+  if (force && previous?.revision === memo.revision) {
+    await db.prepare(`DELETE FROM memo_semantic_index WHERE memo_id = ?`).bind(memo.id).run();
   }
 
   await deleteVectors(env.MEMO_VECTORS, memo.id, previous?.chunk_count ?? 0);
@@ -148,7 +159,8 @@ export const reindexMemos = async (
   db: D1Database,
   workspaceId: string,
   limit: number,
-  cursor?: string
+  cursor?: string,
+  force = false
 ) => {
   const rows = await db
     .prepare(
@@ -165,7 +177,7 @@ export const reindexMemos = async (
   let indexedChunks = 0;
 
   for (const memo of rows.results) {
-    const chunkCount = await indexMemo(env, db, workspaceId, memo);
+    const chunkCount = await indexMemo(env, db, workspaceId, memo, force);
     if (chunkCount > 0) {
       indexedMemos += 1;
       indexedChunks += chunkCount;

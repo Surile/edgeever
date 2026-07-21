@@ -64,8 +64,9 @@ they are returned, so trashed, deleted, or out-of-date memos are never returned.
    keep passing its `nextCursor` until the returned value is `null`.
 
 The `workspaceId` metadata index must exist before the initial `reindex_memos`
-run. If it is added later, run indexing again so Vectorize can populate the new
-metadata index.
+run. If it is added later, run indexing again with `force: true` so Vectorize
+rewrites existing vectors and populates the new metadata index. Use `force` only
+for this type of repair; normal incremental indexing does not need it.
 
 ## Disable it
 

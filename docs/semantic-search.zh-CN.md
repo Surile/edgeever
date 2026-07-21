@@ -59,7 +59,8 @@ EdgeEver 可以为 MCP 服务可选地添加笔记语义搜索。笔记正文仍
    持续将返回的 `nextCursor` 传入下一次调用，直到它为 `null`。
 
 `workspaceId` 元数据索引必须在第一次运行 `reindex_memos` 前创建。若稍后才
-创建，请再次运行索引，以便 Vectorize 填充新的元数据索引。
+创建，请再次运行索引并传入 `force: true`，以便 Vectorize 重写已有向量并填充
+新的元数据索引。`force` 只应用于这类修复；常规增量索引不需要传入。
 
 ## 关闭方式
 
