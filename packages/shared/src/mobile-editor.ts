@@ -4,6 +4,7 @@ export type MobileEditorLocale = "zh-CN" | "en-US";
 
 export type MobileEditorToolbarActionId =
   | "image"
+  | "mermaid"
   | "bold"
   | "bulletList"
   | "blockquote"
@@ -21,6 +22,7 @@ export type MobileEditorTableActionId =
 
 export const MOBILE_EDITOR_ACTIVE_FLAGS = {
   bold: 1,
+  mermaid: 2,
   bulletList: 8,
   blockquote: 16,
   table: 32,
@@ -29,6 +31,7 @@ export const MOBILE_EDITOR_ACTIVE_FLAGS = {
 
 export const MOBILE_EDITOR_TOOLBAR_ACTIONS = [
   { id: "image", activeFlag: 0, requiresTable: false },
+  { id: "mermaid", activeFlag: MOBILE_EDITOR_ACTIVE_FLAGS.mermaid, requiresTable: false },
   { id: "bold", activeFlag: MOBILE_EDITOR_ACTIVE_FLAGS.bold, requiresTable: false },
   { id: "bulletList", activeFlag: MOBILE_EDITOR_ACTIVE_FLAGS.bulletList, requiresTable: false },
   { id: "blockquote", activeFlag: MOBILE_EDITOR_ACTIVE_FLAGS.blockquote, requiresTable: false },
@@ -54,8 +57,13 @@ const MOBILE_EDITOR_COPY = {
   "zh-CN": {
     placeholder: "开始记录...",
     toolbar: "编辑器工具栏",
+    tableMenu: {
+      title: "表格操作",
+      close: "关闭",
+    },
     actions: {
       image: "上传图片",
+      mermaid: "插入 Mermaid 图表",
       bold: "加粗",
       bulletList: "无序列表",
       blockquote: "引用",
@@ -79,8 +87,13 @@ const MOBILE_EDITOR_COPY = {
   "en-US": {
     placeholder: "Start writing...",
     toolbar: "Editor toolbar",
+    tableMenu: {
+      title: "Table actions",
+      close: "Close",
+    },
     actions: {
       image: "Upload image",
+      mermaid: "Insert Mermaid diagram",
       bold: "Bold",
       bulletList: "Bullet list",
       blockquote: "Quote",
@@ -108,6 +121,9 @@ export const getMobileEditorPlaceholder = (locale: MobileEditorLocale): string =
 
 export const getMobileEditorToolbarLabel = (locale: MobileEditorLocale): string =>
   MOBILE_EDITOR_COPY[locale].toolbar;
+
+export const getMobileEditorTableMenuCopy = (locale: MobileEditorLocale) =>
+  MOBILE_EDITOR_COPY[locale].tableMenu;
 
 export const getMobileEditorToolbarActionLabel = (
   action: MobileEditorToolbarActionId,

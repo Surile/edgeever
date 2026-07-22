@@ -1,5 +1,6 @@
 import type {
   AuthSession,
+  LoginDeviceSession,
   InstanceUser,
   ApiToken,
   CreatedApiToken,
@@ -62,6 +63,7 @@ type SemanticReindexResponse = {
 
 type ListUsersResponse = { users: InstanceUser[] };
 type UserResponse = { user: InstanceUser };
+type ListLoginDeviceSessionsResponse = { sessions: LoginDeviceSession[] };
 
 type MemoResponse = {
   memo: MemoDetail;
@@ -131,6 +133,15 @@ const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
 
 export const api = {
   getSession: () => request<AuthSession>("/api/v1/auth/session"),
+
+  listLoginDeviceSessions: () =>
+    request<ListLoginDeviceSessionsResponse>("/api/v1/auth/sessions"),
+
+  revokeLoginDeviceSession: (sessionId: string) =>
+    request<{ ok: true }>(`/api/v1/auth/sessions/${sessionId}`, { method: "DELETE" }),
+
+  revokeOtherLoginDeviceSessions: () =>
+    request<{ ok: true }>("/api/v1/auth/sessions", { method: "DELETE" }),
 
   login: (payload: { username: string; password: string }) =>
     request<AuthSession>("/api/v1/auth/login", {

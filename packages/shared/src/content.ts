@@ -115,6 +115,53 @@ export const docToText = (doc: unknown): string => {
   return pieces.join(" ").replace(/\s+/g, " ").trim();
 };
 
+let memoCharacterSegmenter: Intl.Segmenter | null | undefined;
+
+const getMemoCharacterSegmenter = () => {
+  if (memoCharacterSegmenter !== undefined) {
+    return memoCharacterSegmenter;
+  }
+
+  memoCharacterSegmenter = typeof Intl.Segmenter === "function"
+    ? new Intl.Segmenter(undefined, { granularity: "grapheme" })
+    : null;
+
+  return memoCharacterSegmenter;
+};
+
+/**
+ * Counts visible memo-body characters while excluding whitespace. Formatting,
+ * titles, tags, and image labels are intentionally not part of the count.
+ */
+export const countMemoCharacters = (doc: unknown): number => {
+  const pieces: string[] = [];
+
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+
+    const current = node as { text?: unknown; content?: unknown };
+
+    if (typeof current.text === "string") {
+      pieces.push(current.text);
+    }
+
+    if (Array.isArray(current.content)) {
+      for (const child of current.content) {
+        walk(child);
+      }
+    }
+  };
+
+  walk(doc);
+  const text = pieces.join("");
+  const segmenter = getMemoCharacterSegmenter();
+  const characters = segmenter ? Array.from(segmenter.segment(text), ({ segment }) => segment) : Array.from(text);
+
+  return characters.reduce((count, character) => count + (/^\s+$/u.test(character) ? 0 : 1), 0);
+};
+
 export const docToMarkdown = (doc: unknown): string => {
   if (!doc || typeof doc !== "object") {
     return "";

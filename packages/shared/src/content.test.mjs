@@ -1,5 +1,25 @@
 import { describe, expect, test } from "bun:test";
-import { docToMarkdown, markdownToDoc, resolveMemoContentDoc } from "./content.ts";
+import { countMemoCharacters, docToMarkdown, markdownToDoc, resolveMemoContentDoc } from "./content.ts";
+
+describe("memo character count", () => {
+  test("counts punctuation while excluding whitespace and formatting", () => {
+    const doc = markdownToDoc("你好， **EdgeEver**!\n\n下一行");
+
+    expect(countMemoCharacters(doc)).toBe(15);
+  });
+
+  test("counts grapheme clusters and ignores image labels", () => {
+    const doc = {
+      type: "doc",
+      content: [
+        { type: "paragraph", content: [{ type: "text", text: "e\u0301 👨‍👩‍👧‍👦" }] },
+        { type: "image", attrs: { alt: "不计入" } },
+      ],
+    };
+
+    expect(countMemoCharacters(doc)).toBe(2);
+  });
+});
 
 describe("Markdown table conversion", () => {
   const markdown = [
@@ -36,5 +56,19 @@ describe("Markdown table conversion", () => {
 
     expect(resolveMemoContentDoc(legacyDoc, markdown).content[0]?.type).toBe("table");
     expect(resolveMemoContentDoc(legacyDoc, "Legacy note")).toBe(legacyDoc);
+  });
+});
+
+describe("Mermaid Markdown conversion", () => {
+  const markdown = "```mermaid\nflowchart LR\n  A --> B\n```";
+
+  test("preserves Mermaid fenced code blocks through a Markdown round trip", () => {
+    const doc = markdownToDoc(markdown);
+
+    expect(doc.content[0]).toMatchObject({
+      type: "codeBlock",
+      attrs: { language: "mermaid" },
+    });
+    expect(docToMarkdown(doc)).toBe(markdown);
   });
 });
